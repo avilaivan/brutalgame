@@ -1,0 +1,305 @@
+// =====================================================================
+//  SALVA LA NAVIDANCE — NÚCLEO: estados, carrera contra el reloj, cámara
+// =====================================================================
+(function () {
+  const C = NV.CFG, U = NV.U, IN = NV.Input, FX = NV.FX, A = NV.Audio, X = NV.X, T = NV.T;
+  const params = new URLSearchParams(location.search);
+  const G = { state: 'boot', frame: 0, parts: [], booms: [], texts: [], bullets: [], coins: [], items: [], enemies: [], marks: [],
+    camX: 0, camY: 8, shakeT: 0, shakeM: 0, flashT: 0, flashC: '#fff', hitstop: 0, bass: 0, onset: 0, beat: 0, beatPos: 0, phase: 0, lastBeat: -1 };
+  NV.G = G;
+  G.sfx = (n) => A.sfx(n);
+  G.shake = (m) => { G.shakeM = Math.max(G.shakeM, m); G.shakeT = 12; };
+  G.flash = (c, t = 8) => { G.flashC = c; G.flashT = t; };
+  G.banner = null;
+  G.say = (s, o = {}) => { G.banner = Object.assign({ s, t: 0, life: o.life || 110 }, o); };
+
+  G.go = function (s) {
+    const prev = NV.Screens[G.state]; if (prev && prev.leave) prev.leave(G);
+    G.state = s; IN.clear(); G.mi = 0; IN.touchOn = false;
+    const sc = NV.Screens[s]; if (sc && sc.enter) sc.enter(G);
+    document.body.classList.toggle('in-register', s === 'register');
+  };
+
+  // ---------------- PARTIDA ----------------
+  G.startRun = function (hero) {
+    const prof = NV.DB.profile(); if (!prof) { G.go('register'); return; }
+    if (NV.Screens[G.state] && NV.Screens[G.state].leave) NV.Screens[G.state].leave(G);
+    G.heroKey = hero; G.profile = prof;
+    G.L = NV.buildLevel();
+    G.enemies = G.L.enemies.map((d) => NV.Enemy(d));
+    G.coins = G.L.coins.map((c) => NV.Coin(c.x, c.y, false));
+    G.items = G.L.items.map((i) => NV.Item(i.type, i.x, i.y));
+    G.bullets = []; G.parts = []; G.booms = []; G.texts = []; G.marks = [];
+    G.cp = 0; G.runTime = 0; G.running = false; G.finished = false; G.finishT = 0;
+    G.coinsGot = 0; G.score = 0; G.kills = 0; G.deaths = 0; G.splits = [];
+    G.bossOn = false; G.boss = null; G.banner = null; G.paused = false;
+    const c0 = G.L.checkpoints[0];
+    G.player = NV.Player(hero, c0.x, c0.y);
+    G.camX = 0; G.state = 'play'; IN.clear(); IN.touchOn = true; document.body.classList.remove('in-register');
+    // la canción del personaje arranca desde el principio; cuenta regresiva de 4 beats
+    A.play(hero, 0);
+    G.countBeat = null; G.count = 0;
+    G.token = null; NV.DB.startRun(prof, hero).then((t) => { G.token = t; });
+    if (params.get('boss')) { G.cp = 3; G.respawnAt(G.L.checkpoints[3]); }
+  };
+
+  G.respawnAt = function (c) {
+    const p = NV.Player(G.heroKey, c.x, c.y); p.invuln = 90; G.player = p;
+    G.bullets = [];
+  };
+  G.respawn = function () {
+    if (G.bossOn) { const A0 = G.L.arena; G.respawnAt({ x: A0.x0 + 48, y: A0.floorY }); }
+    else G.respawnAt(G.L.checkpoints[G.cp]);
+    G.flash('#ffffff', 6);
+    FX.text(G, '¡DE NUEVO!', G.player.x + 7, G.player.y - 10, G.player.hero.light);
+  };
+  G.pitFall = function () {
+    const p = G.player;
+    p.hp -= 1; G.sfx('hurt'); G.shake(4);
+    if (p.hp <= 0) { p.y = G.L.h * 16; NV.killPlayer(p, G); p.y = p.safe.y - p.h; p.x = p.safe.x - 7; return; }
+    p.x = p.safe.x - 7; p.y = p.safe.y - p.h - 2; p.vx = p.vy = 0; p.invuln = 70; p.dash = 0;
+    FX.burst(G, p.x + 7, p.y + 17, p.hero.color, 12, 2, 20, 0, 2);
+  };
+
+  G.getCoin = function (x, y) {
+    G.coinsGot++; G.score += C.COIN_PTS; G.sfx('coin');
+    FX.part(G, { x, y, vx: 0, vy: -0.6, color: '#fff3c4', life: 8, max: 8, size: 3 });
+  };
+  G.getItem = function (it) {
+    const p = G.player;
+    if (it.type === 'mega') { for (let i = 0; i < 10; i++) G.coins.push(NV.Coin(it.x, it.y, true)); G.score += 1000; G.sfx('mega'); FX.text(G, 'MEGA B-COIN +1000', it.x, it.y - 14, '#f5c542', 1, 60); G.flash('#f5c542', 6); }
+    if (it.type === 'shield') { p.shield = C.SHIELD_TIME; G.sfx('shield'); G.say('¡ESCUDO!', { sub: 'SOS INMUNE: TOCÁ ENEMIGOS PARA ROMPERLOS', life: 90, color: '#f5c542' }); }
+    if (it.type === 'heart') { p.hp = Math.min(C.HP, p.hp + 2); G.sfx('heal'); FX.text(G, '+2 ♥', it.x, it.y - 14, '#ff2e4a', 1, 50); }
+  };
+
+  G.onBossKilled = function () {
+    G.finished = true; G.running = false; G.finishT = 0;
+    const time = Math.round(G.runTime * 1000) / 1000;
+    const prevBest = NV.DB.best(); const pb = !prevBest || time < prevBest;
+    if (pb) { NV.DB.setBest(time); NV.DB.setSplits(G.splits); }
+    G.result = { hero: G.heroKey, time, coins: G.coinsGot, deaths: G.deaths, score: G.score, pb, prevBest };
+    G.say('¡NAVIDANCE SALVADA!', { scale: 3, life: 220, sub: U.fmtTime(time), subColor: '#ffffff' });
+    G.sfx('win');
+    G.submit = null;
+    NV.DB.submit({ name: G.profile.name, ig: G.profile.ig, playerId: G.profile.id, hero: G.heroKey, timeMs: Math.round(time * 1000), coins: G.coinsGot, deaths: G.deaths, token: G.token })
+      .then((r) => { G.submit = r; });
+  };
+
+  // ---------------- ACTUALIZACIÓN ----------------
+  function updateMusic() {
+    G.beatPos = A.beatPos(); const b = Math.floor(G.beatPos);
+    G.beatTick = b !== G.lastBeat; G.lastBeat = b; G.beat = b; G.phase = G.beatPos - b;
+    G.bass = U.lerp(G.bass, A.level('bass'), 0.35); G.onset = U.lerp(G.onset, A.level('onset'), 0.5);
+  }
+
+  function updatePlay() {
+    const p = G.player, L = G.L;
+    if (G.paused) return;
+    if (IN.pressed('pause')) { G.paused = true; G.mi = 0; A.pause(); IN.clear(); return; }
+    if (G.pauseTap) { G.pauseTap = false; G.paused = true; G.mi = 0; A.pause(); IN.clear(); return; }
+
+    // cuenta regresiva sincronizada con la canción
+    if (!G.running && !G.finished) {
+      if (G.countBeat === null && G.beatTick) G.countBeat = G.beat;
+      if (G.countBeat !== null) {
+        const n = 4 - (G.beat - G.countBeat);
+        if (G.beatTick) { if (n > 0) { G.sfx('beep'); G.say(String(n), { scale: 6, life: 26, color: p.hero.light }); } else { G.sfx('go'); G.say('¡YA!', { scale: 6, life: 40, color: '#f5c542' }); G.running = true; G.say('¡YA!', { scale: 6, life: 40, color: '#f5c542', sub: 'LLEGÁ AL GRINCH Y VENCELO', subColor: '#ffffff' }); } }
+      }
+    }
+    if (G.running) {
+      G.runTime += 1 / 60;
+      if (G.runTime >= C.TIME_LIMIT) { G.running = false; G.sfx('timeout'); G.heroKeyLast = G.heroKey; G.go('timeout'); return; }
+    }
+    if (G.finished) { G.finishT++; if (G.finishT > 240) { G.go('results'); return; } }
+    if (G.banner) { G.banner.t++; if (--G.banner.life <= 0) G.banner = null; }
+
+    if (G.hitstop > 0) { G.hitstop--; return; }
+
+    NV.updatePlayer(p, G, !G.running && !G.finished);
+
+    // checkpoints (con tiempo parcial vs tu mejor)
+    for (let i = G.cp + 1; i < L.checkpoints.length; i++) {
+      const c = L.checkpoints[i];
+      if (p.x > c.x && !p.dead) {
+        G.cp = i; G.splits[i] = G.runTime; G.sfx('checkpoint');
+        const pbS = NV.DB.splits()[i]; let sub = U.fmtTime(G.runTime), sc = '#ffffff';
+        if (pbS) { const d = G.runTime - pbS; sub += '  ' + (d < 0 ? '-' : '+') + Math.abs(d).toFixed(2); sc = d < 0 ? '#33e07a' : '#ff2e4a'; }
+        G.say(c.label, { sub, subColor: sc, life: 100 });
+      }
+    }
+    // entrada a la arena del jefe
+    const Ar = L.arena;
+    if (!G.bossOn && p.x > Ar.x0 + 40) {
+      G.bossOn = true;
+      for (let y = 0; y < NV.GR; y++) L.t[y * L.w + Ar.gateX] = T.GATE;
+      G.boss = NV.Boss(Ar); G.enemies = [];
+      G.sfx('roar'); G.shake(8);
+      G.say('¡CYBER-GRINCH!', { scale: 3, life: 120, color: '#7cff4d', sub: 'ESQUIVÁ LOS LÁSERES DE SUS LENTES' });
+      G.bossWake = G.beat + 4 - (G.beat & 3) + 4; // se activa 2 compases después
+    }
+    if (G.boss && !G.boss.active && !G.boss.dead && G.beat >= G.bossWake) { G.boss.active = true; G.boss.startBeat = G.beat; }
+
+    for (const e of G.enemies) if (Math.abs(e.x - p.x) < X.W * 1.2) NV.updateEnemy(e, G);
+    G.enemies = G.enemies.filter((e) => !e.dead);
+    if (G.boss) NV.updateBoss(G.boss, G);
+    updateBullets();
+    for (const c of G.coins) NV.updateCoin(c, G); G.coins = G.coins.filter((c) => !c.dead);
+    for (const it of G.items) NV.updateItem(it, G); G.items = G.items.filter((i) => !i.dead);
+    for (const m of G.marks) m.life--; G.marks = G.marks.filter((m) => m.life > 0);
+    FX.update(G);
+    updateCamera();
+  }
+
+  function updateCamera() {
+    const p = G.player, L = G.L, W = X.W, Ar = L.arena;
+    let target = p.x + 7 - W * 0.38 + p.dir * 30;
+    let min = 0, max = Ar.x1 - W;
+    if (G.bossOn) {
+      if (W >= Ar.x1 - Ar.x0) { target = (Ar.x0 + Ar.x1) / 2 - W / 2; min = max = target; }
+      else { min = Ar.x0; max = Ar.x1 - W; }
+    }
+    G.camX = U.clamp(U.lerp(G.camX, target, 0.12), min, max);
+    if (G.shakeT > 0 && --G.shakeT === 0) G.shakeM = 0;
+  }
+
+  function hitRect(b, r) { const cx = U.clamp(b.x, r.x, r.x + r.w), cy = U.clamp(b.y, r.y, r.y + r.h); return (b.x - cx) ** 2 + (b.y - cy) ** 2 < b.r * b.r; }
+
+  function updateBullets() {
+    const p = G.player, L = G.L;
+    for (const b of G.bullets) {
+      b.t++; b.vy += b.g || 0; b.x += b.vx; b.y += b.vy;
+      if (--b.life <= 0) { b.dead = true; if (b.bomb) explode(b); continue; }
+      if (b.mine) {
+        if (NV.Phys.solidAt(L, b.x, b.y)) { b.dead = true; FX.burst(G, b.x, b.y, '#ffffff', 3, 1, 8, 0, 1); continue; }
+        for (const e of G.enemies) if (!e.dead && hitRect(b, e)) { NV.damageEnemy(e, G, b.dmg); b.dead = true; FX.burst(G, b.x, b.y, p.hero.light, 4, 1.4, 10, 0, 1); break; }
+        if (!b.dead && G.boss && G.boss.active && !G.boss.dead && hitRect(b, NV.bossBox(G.boss))) { NV.damageBoss(G.boss, G, b.dmg); b.dead = true; FX.burst(G, b.x, b.y, '#ffd23d', 4, 1.4, 10, 0, 1); }
+        continue;
+      }
+      // proyectiles enemigos
+      if (b.wave) { if (b.x < L.arena.x0 + 4) b.dead = true; }
+      else if (b.bomb) {
+        const floorHit = b.rain ? b.y >= L.arena.floorY - 4 : (b.vy > 0 && NV.Phys.groundAt(L, b.x, b.y + 4));
+        if (floorHit) { explode(b); continue; }
+      } else if (NV.Phys.solidAt(L, b.x, b.y)) { b.dead = true; continue; }
+      if (!p.dead && hitRect(b, NV.playerBox(p))) {
+        if (b.bomb) { explode(b); continue; }
+        if (NV.hurtPlayer(p, G, b.x) || p.shield > 0) { b.dead = true; if (p.shield > 0) FX.burst(G, b.x, b.y, '#f5c542', 5, 1.5, 10, 0, 1); }
+      }
+    }
+    G.bullets = G.bullets.filter((b) => !b.dead);
+  }
+  function explode(b) {
+    b.dead = true; G.sfx('kill'); FX.boom(G, b.x, b.y - 4);
+    FX.burst(G, b.x, b.y, b.green ? '#33e07a' : '#ff2e4a', 8, 2, 16, 0.1, 2);
+    const p = G.player; if (!p.dead && U.dist(b.x, b.y, p.x + 7, p.y + 20) < 22) NV.hurtPlayer(p, G, b.x);
+  }
+
+  // ---------------- DIBUJO ----------------
+  function drawPlay(ctx) {
+    const L = G.L, W = X.W;
+    const sx = G.shakeT > 0 ? Math.round((Math.random() - 0.5) * G.shakeM) : 0, sy = G.shakeT > 0 ? Math.round((Math.random() - 0.5) * G.shakeM) : 0;
+    const cx = Math.round(G.camX) + sx, cy = G.camY + sy;
+    NV.Stage.drawBack(ctx, G, cx);
+    NV.Stage.drawLights(ctx, G, cx);
+    NV.Stage.drawTruss(ctx, G, cx);
+    NV.Stage.drawDeco(ctx, G, cx, cy);
+    NV.Stage.drawTiles(ctx, L, cx, cy);
+    // balizas de checkpoint y puerta
+    L.checkpoints.forEach((c, i) => { if (i > 0) X.spr('beacon', i <= G.cp ? 1 : 0, c.x - cx, c.y - cy); });
+    const dx = L.bossDoor - cx; if (dx > -50 && dx < W + 10 && !G.bossOn) { ctx.drawImage(X.img.deco_door, Math.round(dx), NV.GR * 16 - 96 - cy); X.text('JEFE', dx + 20, NV.GR * 16 - 110 - cy, { align: 'center', color: (G.frame >> 4) % 2 ? '#ff2e4a' : '#ff9aa8', outline: true }); }
+    for (const m of G.marks) { if ((m.life >> 2) % 2) X.rect(m.x - 10 - cx, L.arena.floorY - 3 - cy, 20, 3, '#ff2e4a'); }
+    for (const it of G.items) NV.drawItem(it, cx, cy, G);
+    for (const c of G.coins) NV.drawCoin(c, cx, cy, G.frame);
+    for (const e of G.enemies) if (e.x - cx > -40 && e.x - cx < W + 40) NV.drawEnemy(e, cx, cy);
+    if (G.boss) NV.drawBoss(ctx, G.boss, G, cx, cy);
+    NV.drawPlayer(ctx, G.player, G, cx, cy);
+    for (const b of G.bullets) {
+      if (b.kind === 'ornament') X.spr('ornament', (b.green ? 2 : 0) + ((G.frame >> 3) & 1), b.x - cx, b.y - cy + 6);
+      else if (b.kind === 'wave') X.spr('wave', (G.frame >> 3) & 1, b.x - cx, b.y - cy + 8);
+      else X.spr(b.kind, (b.t >> 2) & 1, b.x - cx, b.y - cy + (b.kind === 'elaser' ? 2 : 4), { flip: b.vx < 0 });
+    }
+    FX.draw(ctx, G, cx, cy);
+    NV.Stage.drawSnow(ctx, cx);
+    FX.drawTexts(G, cx, cy);
+    if (G.flashT > 0) { ctx.globalAlpha = G.flashT / 18; ctx.fillStyle = G.flashC; ctx.fillRect(0, 0, W, 360); ctx.globalAlpha = 1; G.flashT--; }
+    NV.HUD.draw(ctx, G);
+    if (IN.isTouch && !G.paused) { const r = X.button('II', W - 20, 64, 26, 20, { scale: 1 }); if (IN.inRect(G.tapThisFrame, r)) G.pauseTap = true; }
+    if (G.paused) NV.Screens.pause(ctx, G);
+  }
+  G.unpause = function () { G.paused = false; A.resume(); IN.clear(); };
+
+  // ---------------- LOOP ----------------
+  const BOT = params.get('bot');
+  function bot() {
+    const f = G.frame, b = IN.bot;
+    b.right = true; b.shoot = true; b.jump = f % 50 < 18; b.dash = f % 140 < 10;
+    if (G.state !== 'play') b.confirm = f % 30 < 2;
+  }
+  function update() {
+    if (BOT) bot();
+    IN.update();
+    updateMusic();
+    if (G.state === 'play') updatePlay();
+    G.frame++;
+  }
+  function draw() {
+    const ctx = X.ctx;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    G.tapThisFrame = IN.tap();
+    if (G.state === 'boot') {
+      ctx.fillStyle = '#07060b'; ctx.fillRect(0, 0, X.W, 360);
+      X.text('CARGANDO ' + Math.round((X.loaded / Math.max(1, X.total)) * 100) + '%', X.W / 2, 170, { scale: 2, align: 'center', color: '#f5c542' });
+    } else if (G.state === 'play') drawPlay(ctx);
+    else if (NV.Screens[G.state]) NV.Screens[G.state].draw(ctx, G);
+    if (G.err && (BOT || params.has('debug'))) { X.rect(0, 0, X.W, 12, '#000'); X.text(G.err, 2, 2, { color: '#ff2e4a' }); }
+    X.present();
+  }
+  window.addEventListener('error', (e) => { G.err = (e.message || 'error') + ' ' + (e.filename || '').split('/').pop() + ':' + e.lineno; });
+
+  let last = performance.now(), acc = 0;
+  function loop(now) {
+    acc += Math.min(100, now - last); last = now;
+    let n = 0; while (acc >= 1000 / 60 && n < 4) { update(); acc -= 1000 / 60; n++; }
+    draw(); requestAnimationFrame(loop);
+  }
+
+  // ---------------- REGISTRO (formulario) ----------------
+  function setupRegister() {
+    const go = document.getElementById('regGo');
+    const submit = () => {
+      const name = document.getElementById('regName').value.trim().replace(/\s+/g, ' ');
+      let ig = document.getElementById('regIg').value.trim().replace(/^@+/, '').toLowerCase();
+      const ok = document.getElementById('regOk').checked;
+      const err = document.getElementById('regErr');
+      if (name.length < 2) { err.textContent = 'Poné tu nombre'; return; }
+      if (!/^[a-z0-9._]{1,30}$/.test(ig)) { err.textContent = 'Usuario de Instagram inválido'; return; }
+      if (!ok) { err.textContent = 'Tenés que aceptar para competir'; return; }
+      NV.DB.saveProfile(name.slice(0, 16), ig);
+      A.unlock(); A.sfx('select');
+      G.go('select');
+      if (IN.isTouch && document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().then(() => { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); }).catch(() => {});
+    };
+    go.addEventListener('click', submit);
+    document.getElementById('regIg').addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+    document.getElementById('regName').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('regIg').focus(); });
+    document.getElementById('regBack').addEventListener('click', () => G.go('title'));
+  }
+
+  // ---------------- ARRANQUE ----------------
+  X.resize(); window.addEventListener('resize', X.resize);
+  window.addEventListener('keydown', (e) => { if (e.code === 'KeyM' && document.activeElement.tagName !== 'INPUT') A.toggleMute(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { if (G.state === 'play' && G.running && !G.paused) { G.paused = true; G.mi = 0; } A.pause(); } else if (G.state !== 'play' || !G.paused) A.resume(); });
+  IN.setup(X.disp);
+  NV.Stage.init();
+  setupRegister();
+  requestAnimationFrame(loop);
+  NV.DB.init();
+  // primer toque: desbloquea el audio y arranca una canción de fondo en el menú
+  const firstTouch = () => { A.unlock(); if (!G.menuMusic && G.state !== 'play') { G.menuMusic = true; A.preview(U.pick(NV.HERO_ORDER)); } window.removeEventListener('pointerdown', firstTouch); window.removeEventListener('keydown', firstTouch); };
+  window.addEventListener('pointerdown', firstTouch); window.addEventListener('keydown', firstTouch);
+  X.load(() => {
+    const h = params.get('hero');
+    if (h && NV.HEROES[h]) { if (!NV.DB.profile()) NV.DB.saveProfile('TEST', 'test'); G.startRun(h); }
+    else G.go('title');
+  });
+})();

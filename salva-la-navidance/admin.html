@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>ADMIN · RANKING SALVA LA NAVIDANCE</title>
+  <style>
+    @font-face { font-family: 'Brutal8'; src: url(assets/fonts/brutal8.ttf) format('truetype'); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #07060b; color: #dfe6f5; font-family: 'Brutal8', monospace; font-size: 11px; padding: 16px; }
+    h1 { font-size: 33px; color: #f5c542; text-shadow: 3px 3px 0 #5c0815; font-weight: normal; margin-bottom: 4px; }
+    .sub { color: #8ea2c4; margin-bottom: 16px; }
+    .bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+    input, button, a.btn { font-family: inherit; font-size: 22px; padding: 6px 12px; background: #10101e; color: #fff; border: 0; box-shadow: inset 0 0 0 3px #3a4466; text-decoration: none; }
+    button, a.btn { cursor: pointer; } button.red { background: #b3132b; box-shadow: inset 0 0 0 3px #fff; }
+    .top3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .card { background: #0b0a16; padding: 14px; box-shadow: 0 0 0 3px #0b0a12, 0 0 0 6px var(--c); }
+    .card .pos { font-size: 44px; color: var(--c); } .card .name { font-size: 22px; color: #fff; margin: 4px 0; } .card a { color: #f5c542; font-size: 22px; }
+    .card .time { font-size: 22px; color: #fff; margin-top: 6px; }
+    table { width: 100%; border-collapse: collapse; background: #0b0a16; }
+    th { text-align: left; color: #f5c542; padding: 8px; border-bottom: 3px solid #b3132b; font-weight: normal; }
+    td { padding: 7px 8px; border-bottom: 1px solid #1d2238; font-size: 11px; } tr:nth-child(even) td { background: #0e0d1c; }
+    td.t { font-size: 22px; color: #fff; } td a { color: #f5c542; }
+    .h-ivan { color: #ff2e4a; } .h-hades { color: #4d8dff; } .h-matias { color: #33e07a; }
+    #msg { color: #ff2e4a; min-height: 14px; margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <h1>RANKING · ADMIN</h1>
+  <div class="sub">SALVA LA NAVIDANCE · Mejor tiempo de cada jugador · se actualiza solo cada 15 segundos</div>
+  <div class="bar">
+    <input id="key" type="password" placeholder="CLAVE ADMIN">
+    <button class="red" id="go">VER</button>
+    <a class="btn" id="csv" href="#">DESCARGAR CSV</a>
+    <span id="stats"></span>
+  </div>
+  <div id="msg"></div>
+  <div class="top3" id="top3"></div>
+  <table><thead><tr><th>#</th><th>NOMBRE</th><th>INSTAGRAM</th><th>DJ</th><th>TIEMPO</th><th>B-COINS</th><th>CAÍDAS</th><th>PARTIDAS</th><th>FECHA</th></tr></thead><tbody id="rows"></tbody></table>
+  <script>
+    const fmt = (ms) => { const s = ms / 1000, m = Math.floor(s / 60); return String(m).padStart(2, '0') + ':' + (s % 60).toFixed(2).padStart(5, '0'); };
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const keyEl = document.getElementById('key'); keyEl.value = sessionStorage.getItem('nv_admin') || '';
+    async function load() {
+      const key = keyEl.value; if (!key) return;
+      sessionStorage.setItem('nv_admin', key);
+      document.getElementById('csv').href = '/api/admin?format=csv&key=' + encodeURIComponent(key);
+      try {
+        const r = await fetch('/api/admin?key=' + encodeURIComponent(key), { cache: 'no-store' });
+        const j = await r.json();
+        if (!r.ok) { document.getElementById('msg').textContent = j.error || 'Error'; return; }
+        document.getElementById('msg').textContent = '';
+        document.getElementById('stats').textContent = j.players + ' JUGADORES · ' + j.total + ' PARTIDAS TERMINADAS';
+        const cols = ['#f5c542', '#dfe6f5', '#e0904a'];
+        document.getElementById('top3').innerHTML = j.ranking.slice(0, 3).map((s, i) => `<div class="card" style="--c:${cols[i]}"><div class="pos">TOP ${i + 1}</div><div class="name">${esc(s.name)}</div><a href="https://instagram.com/${esc(s.ig)}" target="_blank">@${esc(s.ig)}</a><div class="time">${fmt(s.timeMs)} · <span class="h-${s.hero}">${s.hero.toUpperCase()}</span></div></div>`).join('');
+        document.getElementById('rows').innerHTML = j.ranking.map((s) => `<tr><td>${s.rank}</td><td>${esc(s.name)}</td><td><a href="https://instagram.com/${esc(s.ig)}" target="_blank">@${esc(s.ig)}</a></td><td class="h-${s.hero}">${s.hero.toUpperCase()}</td><td class="t">${fmt(s.timeMs)}</td><td>${s.coins}</td><td>${s.deaths}</td><td>${s.plays}</td><td>${new Date(s.date).toLocaleString('es-AR')}</td></tr>`).join('');
+      } catch (e) { document.getElementById('msg').textContent = 'No se pudo conectar con el servidor (¿está corriendo node server.js?)'; }
+    }
+    document.getElementById('go').onclick = load; keyEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') load(); });
+    load(); setInterval(load, 15000);
+  </script>
+</body>
+</html>

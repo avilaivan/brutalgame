@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#07060b">
+  <title>SALVA LA NAVIDANCE · BRUTAL.</title>
+  <link rel="preload" href="assets/fonts/brutal8.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- REGISTRO: nombre + usuario de Instagram -->
+  <div id="reg" class="overlay hidden">
+    <div class="box">
+      <div class="coin"></div>
+      <h1>SALVA LA<br><span>NAVIDANCE</span></h1>
+      <p class="lead">Terminá el nivel en el menor tiempo y entrá al ranking.</p>
+      <label for="regName">TU NOMBRE</label>
+      <input id="regName" maxlength="16" autocomplete="nickname" spellcheck="false" placeholder="NOMBRE">
+      <label for="regIg">USUARIO DE INSTAGRAM</label>
+      <div class="ig"><span>@</span><input id="regIg" maxlength="30" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="usuario"></div>
+      <label class="chk"><input type="checkbox" id="regOk"><i></i><span>Acepto que BRUTAL. me contacte por Instagram si quedo entre los mejores del ranking.</span></label>
+      <div id="regErr"></div>
+      <button id="regGo" class="btn red">CONTINUAR ▶</button>
+      <button id="regBack" class="btn">VOLVER</button>
+      <p class="tiny">Tu Instagram no se muestra en el ranking público.</p>
+    </div>
+  </div>
+
+  <div id="rotate">
+    <div class="coin"></div>
+    <p>GIRÁ EL TELÉFONO</p>
+    <small>SALVA LA NAVIDANCE SE JUEGA EN HORIZONTAL</small>
+  </div>
+
+  <!-- Scripts (sin módulos: también funciona abriendo el archivo directo) -->
+  <script src="js/data/font-data.js"></script>
+  <script src="js/data/art-data.js"></script>
+  <script src="js/data/music-data.js"></script>
+  <script src="js/data/sprites-data.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/gfx.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/level.js"></script>
+  <script src="js/physics.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/enemies.js"></script>
+  <script src="js/stage.js"></script>
+  <script src="js/hud.js"></script>
+  <script src="js/screens.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

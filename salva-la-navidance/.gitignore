@@ -1,0 +1,3 @@
+data/scores.json
+data/*.tmp
+node_modules/

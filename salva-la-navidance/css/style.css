@@ -1,0 +1,41 @@
+@font-face { font-family: 'Brutal8'; src: url(../assets/fonts/brutal8.ttf) format('truetype'); font-display: block; }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { width: 100%; height: 100%; background: #07060b; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+body { display: flex; align-items: center; justify-content: center; font-family: 'Brutal8', monospace; color: #fff; }
+#game { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+.hidden { display: none !important; }
+
+/* ---------- Registro 8-bit ---------- */
+.overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 12px; overflow-y: auto; touch-action: pan-y; background: rgba(5, 4, 12, .35); z-index: 5; }
+.box { width: min(440px, 100%); background: #0b0a16; padding: 18px 18px 12px; text-align: center;
+  box-shadow: 0 0 0 3px #0b0a12, 0 0 0 6px #b3132b, 0 0 0 9px #0b0a12, 0 0 40px rgba(255, 46, 74, .35); margin: auto; }
+.box .coin { width: 44px; height: 44px; margin: 0 auto 6px; background: url(../assets/img/coin.png) center/contain no-repeat; animation: spin 1.1s steps(8) infinite; }
+.box h1 { font-size: 22px; line-height: 1.25; font-weight: normal; letter-spacing: 1px; color: #fff; text-shadow: 2px 2px 0 #b3132b; }
+.box h1 span { font-size: 33px; color: #f5c542; text-shadow: 3px 3px 0 #5c0815; }
+.box .lead { font-size: 11px; color: #8ea2c4; margin: 8px 0 12px; line-height: 1.5; }
+.box label { display: block; text-align: left; font-size: 11px; color: #f5c542; margin: 10px 0 4px; letter-spacing: 1px; }
+.box input:not([type=checkbox]) { width: 100%; font-family: 'Brutal8', monospace; font-size: 22px; color: #fff; background: #05040b; border: 0; outline: 0; padding: 8px 10px;
+  box-shadow: inset 0 0 0 3px #3a4466; border-radius: 0; -webkit-appearance: none; user-select: text; -webkit-user-select: text; }
+.box input:focus { box-shadow: inset 0 0 0 3px #f5c542; }
+.box input::placeholder { color: #3a4466; }
+.ig { display: flex; align-items: stretch; }
+.ig span { font-size: 22px; background: #3a4466; color: #fff; padding: 8px 8px; line-height: 1.2; }
+.chk { display: flex !important; gap: 8px; align-items: flex-start; color: #cfd8e6 !important; line-height: 1.5; cursor: pointer; margin-top: 14px !important; }
+.chk input { position: absolute; opacity: 0; }
+.chk i { flex: 0 0 18px; height: 18px; background: #05040b; box-shadow: inset 0 0 0 3px #3a4466; margin-top: 1px; }
+.chk input:checked + i { background: #33e07a; box-shadow: inset 0 0 0 3px #0a4a25; }
+.chk span { font-size: 11px; text-align: left; }
+#regErr { min-height: 16px; font-size: 11px; color: #ff2e4a; margin: 8px 0 4px; }
+.btn { display: block; width: 100%; font-family: 'Brutal8', monospace; font-size: 22px; color: #fff; background: #10101e; border: 0; padding: 10px; margin-top: 8px; cursor: pointer;
+  box-shadow: inset 0 0 0 3px #3a4466, inset 0 -6px 0 rgba(0,0,0,.35); }
+.btn.red { background: #b3132b; box-shadow: inset 0 0 0 3px #ffffff, inset 0 -6px 0 rgba(0,0,0,.35); }
+.btn:active { transform: translateY(2px); }
+.tiny { font-size: 11px; color: #5d6a8a; margin-top: 10px; }
+@keyframes spin { 0% { transform: scaleX(1); } 50% { transform: scaleX(.08); } 100% { transform: scaleX(1); } }
+
+/* ---------- Girar teléfono (solo durante el juego) ---------- */
+#rotate { position: fixed; inset: 0; background: #07060b; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; z-index: 10; padding: 20px; }
+#rotate p { font-size: 22px; color: #f5c542; text-shadow: 2px 2px 0 #5c0815; }
+#rotate small { font-size: 11px; color: #8ea2c4; }
+#rotate .coin { width: 80px; height: 80px; background: url(../assets/img/coin.png) center/contain no-repeat; animation: spin 1.1s steps(8) infinite; }
+@media (orientation: portrait) and (max-width: 900px) { body:not(.in-register) #rotate { display: flex; } }

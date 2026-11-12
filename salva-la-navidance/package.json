@@ -1,0 +1,12 @@
+{
+  "name": "salva-la-navidance",
+  "version": "1.0.0",
+  "description": "Salva la Navidance — juego web 8-bit con ranking de tiempo para la fiesta BRUTAL.",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
