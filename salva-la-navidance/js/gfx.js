@@ -13,6 +13,7 @@
   // ---------------- escalado ----------------
   X.resize = function () {
     const ww = window.innerWidth, wh = window.innerHeight;
+    if (!ww || !wh) return; // ventana sin tamaño (pestaña oculta, rotando): esperar al próximo resize
     let W = Math.round((C.H * ww) / wh / 2) * 2;
     W = NV.U.clamp(W, C.MIN_W, C.MAX_W);
     X.W = W; buf.width = W; buf.height = C.H;
@@ -24,6 +25,7 @@
     ctx.imageSmoothingEnabled = false;
   };
   X.present = function () {
+    if (!disp.width || !disp.height) return; // un drawImage con tamaño 0 tira error y frena el loop
     dctx.imageSmoothingEnabled = false;
     dctx.drawImage(buf, 0, 0, disp.width, disp.height);
   };

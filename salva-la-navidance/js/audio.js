@@ -18,8 +18,10 @@
     }
   }
   // elementos de audio (streaming, funcionan también abriendo el archivo directo)
+  // preload 'none': cada canción se descarga recién cuando suena (en el menú o al elegir DJ),
+  // así el celular no baja los ~13 MB de las 3 canciones al abrir el juego.
   for (const k in MD) {
-    const el = new Audio(); el.src = MD[k].file; el.preload = 'auto'; el.loop = true; el.volume = A.vol;
+    const el = new Audio(); el.src = MD[k].file; el.preload = 'none'; el.loop = true; el.volume = A.vol;
     A.el[k] = el;
   }
 

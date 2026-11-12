@@ -6,8 +6,10 @@
 //
 //  Variables opcionales:
 //    PORT=3000                 puerto
-//    ADMIN_KEY=una-clave       clave para ver el panel admin.html (nombres + Instagram)
+//    ADMIN_KEY=una-clave       clave para ver el panel admin.html (nombres + Instagram).
+//                              Si no se define, se genera una al azar y se muestra en la consola.
 //    SECRET=otra-clave         firma de los tokens anti-trampa
+//    MIN_SEC=35                tiempo mínimo aceptado (ajustarlo al récord real después de probar)
 //
 //  Los datos se guardan en data/scores.json (una línea por partida terminada).
 // =====================================================================
@@ -18,14 +20,15 @@ const crypto = require('crypto');
 const os = require('os');
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
-const ADMIN_KEY = process.env.ADMIN_KEY || 'brutal-admin';
+const ADMIN_KEY = process.env.ADMIN_KEY || crypto.randomBytes(6).toString('hex');
 const SECRET = process.env.SECRET || crypto.randomBytes(16).toString('hex');
 const ROOT = __dirname;
-const DATA_DIR = path.join(ROOT, 'data');
+const DATA_DIR = process.env.DATA_DIR || path.join(ROOT, 'data');
 const DB_FILE = path.join(DATA_DIR, 'scores.json');
 const HEROES = ['ivan', 'hades', 'matias'];
-const MIN_MS = 30000;      // nadie puede terminar en menos de 30 s
+const MIN_MS = Math.round(parseFloat(process.env.MIN_SEC || '35') * 1000); // nadie puede terminar más rápido
 const MAX_MS = 180000;     // límite del juego: 3 minutos
+const CLOCK_TOL = 3000;    // diferencia máxima entre el reloj del juego y el del servidor (latencia de red)
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 let scores = [];
@@ -47,8 +50,17 @@ function bestPerPlayer() {
   return [...best.values()].sort((a, b) => a.timeMs - b.timeMs || b.coins - a.coins || a.date - b.date);
 }
 
-// ---------- tokens anti-trampa: el servidor anota cuándo empezó la partida ----------
-const usedTokens = new Set();
+// ---------- tokens anti-trampa ----------
+// El servidor firma el inicio de la partida y anota la largada ("¡YA!") con SU reloj.
+// El tiempo que manda el juego tiene que coincidir con lo que midió el servidor:
+// así no sirve editar el cronómetro desde la consola ni mandar un tiempo inventado.
+const usedTokens = new Set(scores.map((s) => s.token).filter(Boolean)); // sobrevive a reinicios
+const goAt = new Map(); // token -> momento de la largada
+function signOk(token, playerId) {
+  if (!token || typeof token !== 'string') return false;
+  const [t, sig] = token.split('.');
+  return sig === crypto.createHmac('sha256', SECRET).update(playerId + '|' + t).digest('hex').slice(0, 24);
+}
 function makeToken(playerId) {
   const t = Date.now();
   const sig = crypto.createHmac('sha256', SECRET).update(playerId + '|' + t).digest('hex').slice(0, 24);
@@ -56,21 +68,25 @@ function makeToken(playerId) {
 }
 function checkToken(token, playerId, timeMs) {
   if (!token || typeof token !== 'string') return 'Falta el token de la partida';
-  const [t, sig] = token.split('.');
-  const good = crypto.createHmac('sha256', SECRET).update(playerId + '|' + t).digest('hex').slice(0, 24);
-  if (sig !== good) return 'Token inválido';
+  if (!signOk(token, playerId)) return 'Token inválido';
   if (usedTokens.has(token)) return 'Esta partida ya fue enviada';
-  const elapsed = Date.now() - parseInt(t, 10);
-  if (elapsed + 3000 < timeMs) return 'Tiempo imposible';          // no pudo terminar antes de lo que tardó de verdad
-  if (elapsed > 30 * 60 * 1000) return 'La partida venció';
+  const start = parseInt(token.split('.')[0], 10);
+  if (Date.now() - start > 30 * 60 * 1000) return 'La partida venció';
+  // Con largada anotada, el reloj del servidor manda. Si la largada no llegó (mala señal),
+  // se usa el inicio de la partida con más margen (cubre la cuenta regresiva).
+  const go = goAt.get(token);
+  const serverMs = Date.now() - (go || start), tol = go ? CLOCK_TOL : 15000;
+  if (timeMs > serverMs + CLOCK_TOL) return 'Tiempo imposible';
+  if (timeMs < serverMs - tol) return 'El tiempo no coincide con el del servidor';
   return null;
 }
 
 // ---------- límite simple de pedidos por IP ----------
+// Ojo: en la fiesta muchos celulares salen por la misma IP (Wi-Fi del lugar), por eso el límite es alto.
 const hits = new Map();
-function limited(ip) {
-  const now = Date.now(); const h = (hits.get(ip) || []).filter((t) => now - t < 60000);
-  h.push(now); hits.set(ip, h); return h.length > 40;
+function limited(ip, key = '', max = 600) {
+  const k = key + ip, now = Date.now(); const h = (hits.get(k) || []).filter((t) => now - t < 60000);
+  h.push(now); hits.set(k, h); return h.length > max;
 }
 
 const clean = (s, n) => String(s || '').replace(/[<>\u0000-\u001f]/g, '').trim().slice(0, n);
@@ -124,6 +140,14 @@ http.createServer(async (req, res) => {
     return json(res, 200, { token: makeToken(playerId) });
   }
 
+  if (url.pathname === '/api/run/go' && req.method === 'POST') {
+    const b = await body(req);
+    if (!signOk(b.token, clean(b.playerId, 40))) return json(res, 400, { error: 'Token inválido' });
+    if (!goAt.has(b.token)) goAt.set(b.token, Date.now());
+    if (goAt.size > 5000) for (const [k, t] of goAt) if (Date.now() - t > 30 * 60 * 1000) goAt.delete(k);
+    return json(res, 200, { ok: true });
+  }
+
   if (url.pathname === '/api/score' && req.method === 'POST') {
     const b = await body(req);
     const name = clean(b.name, 16), ig = clean(b.ig, 30).toLowerCase().replace(/^@+/, ''), hero = clean(b.hero, 10), playerId = clean(b.playerId, 40);
@@ -133,8 +157,8 @@ http.createServer(async (req, res) => {
     if (!HEROES.includes(hero)) return json(res, 400, { error: 'Personaje inválido' });
     if (!(timeMs >= MIN_MS && timeMs <= MAX_MS)) return json(res, 400, { error: 'Tiempo inválido' });
     const tErr = checkToken(b.token, playerId, timeMs); if (tErr) return json(res, 400, { error: tErr });
-    usedTokens.add(b.token);
-    scores.push({ name, ig, hero, playerId, timeMs, coins, deaths, date: Date.now(), ip: crypto.createHash('sha1').update(ip).digest('hex').slice(0, 10) });
+    usedTokens.add(b.token); goAt.delete(b.token);
+    scores.push({ name, ig, hero, playerId, timeMs, coins, deaths, date: Date.now(), token: b.token, ip: crypto.createHash('sha1').update(ip).digest('hex').slice(0, 10) });
     save();
     const list = bestPerPlayer();
     const rank = list.findIndex((s) => s.ig === ig) + 1;
@@ -150,7 +174,9 @@ http.createServer(async (req, res) => {
 
   // ---------- panel de administración (incluye Instagram) ----------
   if (url.pathname === '/api/admin') {
-    if (url.searchParams.get('key') !== ADMIN_KEY) return json(res, 401, { error: 'Clave incorrecta' });
+    // la clave va en un header (no en la URL, que queda en historiales y logs); máx. 10 intentos por minuto
+    if (limited(ip, 'admin:', 10)) return json(res, 429, { error: 'Demasiados intentos, esperá un minuto' });
+    if (req.headers['x-admin-key'] !== ADMIN_KEY) return json(res, 401, { error: 'Clave incorrecta' });
     const list = bestPerPlayer().map((s, i) => ({ rank: i + 1, name: s.name, ig: s.ig, hero: s.hero, timeMs: s.timeMs, coins: s.coins, deaths: s.deaths, date: s.date, plays: scores.filter((x) => x.ig === s.ig).length }));
     if (url.searchParams.get('format') === 'csv') {
       const rows = [['puesto', 'nombre', 'instagram', 'personaje', 'tiempo_seg', 'bcoins', 'caidas', 'partidas', 'fecha']].concat(list.map((s) => [s.rank, s.name, '@' + s.ig, s.hero, (s.timeMs / 1000).toFixed(2), s.coins, s.deaths, s.plays, new Date(s.date).toISOString()]));
@@ -164,6 +190,6 @@ http.createServer(async (req, res) => {
   console.log('\n  SALVA LA NAVIDANCE — servidor listo\n');
   console.log('  En esta PC:      http://localhost:' + PORT);
   for (const ifs of Object.values(os.networkInterfaces())) for (const i of ifs || []) if (i.family === 'IPv4' && !i.internal) console.log('  En el celular:   http://' + i.address + ':' + PORT + '   (mismo Wi-Fi)');
-  console.log('  Panel admin:     http://localhost:' + PORT + '/admin.html   (clave: ' + (process.env.ADMIN_KEY ? '******' : ADMIN_KEY) + ')');
+  console.log('  Panel admin:     http://localhost:' + PORT + '/admin.html   (clave: ' + (process.env.ADMIN_KEY ? '******' : ADMIN_KEY + '  <- al azar, definí ADMIN_KEY para fijarla') + ')');
   console.log('  Partidas guardadas: ' + scores.length + '\n');
 });

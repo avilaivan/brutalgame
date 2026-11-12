@@ -45,9 +45,8 @@
     async function load() {
       const key = keyEl.value; if (!key) return;
       sessionStorage.setItem('nv_admin', key);
-      document.getElementById('csv').href = '/api/admin?format=csv&key=' + encodeURIComponent(key);
       try {
-        const r = await fetch('/api/admin?key=' + encodeURIComponent(key), { cache: 'no-store' });
+        const r = await fetch('/api/admin', { cache: 'no-store', headers: { 'X-Admin-Key': key } });
         const j = await r.json();
         if (!r.ok) { document.getElementById('msg').textContent = j.error || 'Error'; return; }
         document.getElementById('msg').textContent = '';
@@ -57,6 +56,13 @@
         document.getElementById('rows').innerHTML = j.ranking.map((s) => `<tr><td>${s.rank}</td><td>${esc(s.name)}</td><td><a href="https://instagram.com/${esc(s.ig)}" target="_blank">@${esc(s.ig)}</a></td><td class="h-${s.hero}">${s.hero.toUpperCase()}</td><td class="t">${fmt(s.timeMs)}</td><td>${s.coins}</td><td>${s.deaths}</td><td>${s.plays}</td><td>${new Date(s.date).toLocaleString('es-AR')}</td></tr>`).join('');
       } catch (e) { document.getElementById('msg').textContent = 'No se pudo conectar con el servidor (¿está corriendo node server.js?)'; }
     }
+    // CSV: se pide con la clave en el header y se descarga desde memoria
+    document.getElementById('csv').onclick = async (e) => {
+      e.preventDefault();
+      const r = await fetch('/api/admin?format=csv', { headers: { 'X-Admin-Key': keyEl.value } });
+      if (!r.ok) { document.getElementById('msg').textContent = 'Clave incorrecta'; return; }
+      const a = document.createElement('a'); a.href = URL.createObjectURL(await r.blob()); a.download = 'ranking-navidance.csv'; a.click();
+    };
     document.getElementById('go').onclick = load; keyEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') load(); });
     load(); setInterval(load, 15000);
   </script>
