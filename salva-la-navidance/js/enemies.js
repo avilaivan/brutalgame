@@ -280,7 +280,7 @@
     X.spr('grunon', b.frame, b.cx - cx, b.by - cy, { flash: b.flash > 0 || (b.dead && (G.frame >> 1) % 2 && b.deathT < 110) });
     if (glow) { const m = GM(); ctx.save(); ctx.fillStyle = '#9dffbf'; ctx.globalAlpha = 0.5 + 0.5 * Math.sin(G.frame * 0.4); NV.Input.circ(ctx, b.cx - m.w / 2 + m.core[0] - cx, b.by - m.h + m.core[1] - cy, 7); ctx.restore(); }
     if (b.dead) return;
-    // brillo de los ojos y arcos eléctricos entre los aisladores (más intensos en el apagón total)
+    // brillo de los anteojos (más intenso al apuntar y en la segunda fase)
     const m = GM(), ox = b.cx - m.w / 2 - cx, oy = b.by - m.h - cy;
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     eyes(m, b.frame).forEach((l, i) => {
@@ -289,12 +289,6 @@
       g.addColorStop(0, i ? 'rgba(51,224,122,.55)' : 'rgba(255,46,74,.55)'); g.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = g; ctx.fillRect(ox + l[0] - r, oy + l[1] - r, r * 2, r * 2);
     });
-    if (G.frame % (b.phase === 2 ? 3 : 7) < 2) {
-      ctx.strokeStyle = '#bff6ff'; ctx.lineWidth = 1; ctx.beginPath();
-      let x = ox + 48, y = oy + 2; ctx.moveTo(x, y);
-      for (let k = 0; k < 6; k++) { x += 8; y = oy + 2 + U.rand(-6, 4); ctx.lineTo(Math.round(x), Math.round(y)); }
-      ctx.stroke();
-    }
     ctx.restore();
   };
   // SE CORTÓ LA NAVIDAD (fase 2): se apagan las luces; queda un círculo de luz alrededor del DJ

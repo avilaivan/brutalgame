@@ -3,7 +3,7 @@
 //  Todos los números del juego están acá para ajustarlos sin tocar la lógica.
 // =====================================================================
 window.NV = window.NV || {};
-NV.VERSION = 'grunon-2'; // cambiarlo en cada actualización del arte o la música (rompe la caché del navegador)
+NV.VERSION = 'grunon-gorro-1'; // cambiarlo en cada actualización del arte o la música (rompe la caché del navegador)
 
 NV.CFG = {
   // ---------- Pantalla ----------
