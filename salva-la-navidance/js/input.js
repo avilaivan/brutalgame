@@ -3,14 +3,14 @@
 //  En celular hay solo 5 botones: ◀ ▶ (mover), SALTO, DISPARO y DASH.
 // =====================================================================
 (function () {
-  const ACT = ['left', 'right', 'up', 'down', 'jump', 'shoot', 'dash', 'pause', 'confirm', 'back'];
+  const ACT = ['left', 'right', 'up', 'down', 'jump', 'shoot', 'dash', 'pause', 'confirm', 'back', 'restart'];
   const I = { held: {}, prev: {}, taps: [], isTouch: false, bot: {}, touchOn: false, edges: new Set() };
   ACT.forEach((a) => { I.held[a] = I.prev[a] = false; });
   const key = {}, pad = {}, touch = {};
   const KEYS = {
     ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down',
     KeyZ: 'jump', Space: 'jump', KeyK: 'jump', KeyX: 'shoot', KeyJ: 'shoot', KeyC: 'dash', ShiftLeft: 'dash', ShiftRight: 'dash', KeyL: 'dash',
-    Escape: 'pause', KeyP: 'pause', Enter: 'confirm', NumpadEnter: 'confirm', Backspace: 'back',
+    Escape: 'pause', KeyP: 'pause', Enter: 'confirm', NumpadEnter: 'confirm', Backspace: 'back', KeyR: 'restart',
   };
   const typing = () => { const el = document.activeElement; return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'); };
   window.addEventListener('keydown', (e) => {
@@ -70,7 +70,7 @@
     const p = navigator.getGamepads ? navigator.getGamepads()[0] : null; if (!p) return;
     const b = (i) => p.buttons[i] && p.buttons[i].pressed, ax = p.axes[0] || 0, ay = p.axes[1] || 0;
     pad.left = ax < -0.4 || b(14); pad.right = ax > 0.4 || b(15); pad.up = ay < -0.5 || b(12); pad.down = ay > 0.5 || b(13);
-    pad.jump = b(0); pad.shoot = b(2) || b(3); pad.dash = b(1) || b(5) || b(7); pad.pause = b(9); pad.confirm = b(0) || b(9);
+    pad.jump = b(0); pad.shoot = b(2) || b(3); pad.dash = b(1) || b(5) || b(7); pad.pause = b(9); pad.restart = b(8); pad.confirm = b(0) || b(9);
   }
 
   I.update = function () {
@@ -91,9 +91,10 @@
     ctx.save();
     for (const k of ['left', 'right']) {
       const b = L[k], on = I.held[k];
-      ctx.globalAlpha = on ? 0.95 : 0.55;
-      X.panel(b.x, b.y, b.w, b.h, { fill: on ? 'rgba(255,255,255,.35)' : 'rgba(10,10,22,.55)', border: '#ffffff', light: false });
-      X.text(b.label, b.x + b.w / 2, b.y + b.h / 2 - 10, { scale: 3, align: 'center' });
+      // sólidas como los botones redondos: tienen que leerse encima del público
+      ctx.globalAlpha = on ? 0.95 : 0.75;
+      X.panel(b.x, b.y, b.w, b.h, { fill: on ? 'rgba(255,255,255,.45)' : 'rgba(10,10,22,.85)', border: '#ffffff', light: '#5a6e92' });
+      X.text(b.label, b.x + b.w / 2, b.y + b.h / 2 - 10, { scale: 3, align: 'center', color: on ? '#0b0a12' : '#ffffff', shadow: !on });
     }
     for (const k of ['jump', 'shoot', 'dash']) {
       const b = L[k], on = I.held[k];

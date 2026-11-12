@@ -8,7 +8,7 @@
   const ci = (n, len = COLS.length) => COLS[(((Math.floor(n) % len) + len) % len)];
   let snow = [];
   S.init = function () {
-    snow = []; for (let i = 0; i < 90; i++) snow.push({ x: Math.random() * 800, y: Math.random() * 360, s: 0.3 + Math.random(), z: 0.3 + Math.random() * 0.7 });
+    snow = []; for (let i = 0; i < 150; i++) snow.push({ x: Math.random() * 800, y: Math.random() * 360, s: 0.3 + Math.random(), z: 0.3 + Math.random() * 0.7 });
   };
   const hash = (x, y) => ((x * 73856093) ^ (y * 19349663)) >>> 0;
 
@@ -37,7 +37,7 @@
     for (let ox = mo; ox < W; ox += I.mid.width) {
       for (const n of LD.mid_neon) {
         const x = ox + n.x; if (x > W || x + n.w < 0) continue;
-        ctx.globalAlpha = 0.06 + bass * 0.22; ctx.fillStyle = { CY: '#4de2ff', PK: '#ff4fd8', G: '#33e07a', W: '#ffffff' }[n.c] || '#fff';
+        ctx.globalAlpha = 0.06 + bass * 0.22; ctx.fillStyle = { CY: '#4de2ff', PK: '#ff4fd8', G: '#33e07a', W: '#ffffff', R: '#ff2e4a' }[n.c] || '#fff';
         ctx.fillRect(Math.round(x - 3), 30 + n.y - 3, n.w + 6, n.h + 6);
       }
     }
@@ -145,13 +145,76 @@
     }
   };
 
-  S.drawSnow = function (ctx, camX) {
-    const W = NV.X.W; ctx.fillStyle = '#e9f4ff';
-    for (const s of snow) {
-      s.y += s.s * 0.55; if (s.y > 362) s.y = -2;
-      let x = (s.x + Math.sin((s.y + s.x) * 0.02) * 6 - camX * s.z * 0.35) % W; if (x < 0) x += W;
-      ctx.globalAlpha = 0.35 + s.z * 0.55; const sz = s.z > 0.75 ? 2 : 1; ctx.fillRect(Math.round(x), Math.round(s.y), sz, sz);
+  // Color de cada zona: tiñe solo el fondo (no los tiles ni personajes) y cambia suave al avanzar
+  const ZONE_TINT = [[120, 200, 255], [245, 197, 66], [255, 46, 74], [51, 224, 122]]; // ruta 5 nevada, centro navideño, autódromo, jefe
+  let tint = ZONE_TINT[0].slice();
+  S.drawTint = function (ctx, G) {
+    const L = G.L, p = G.player; if (!L || !p) return;
+    let z = 0; for (let i = 0; i < L.zones.length; i++) if (p.x >= L.zones[i].x) z = i;
+    if (G.bossOn) z = 3;
+    for (let k = 0; k < 3; k++) tint[k] += (ZONE_TINT[z][k] - tint[k]) * 0.03;
+    ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.globalAlpha = 0.3;
+    ctx.fillStyle = 'rgb(' + tint.map(Math.round).join(',') + ')'; ctx.fillRect(0, 0, NV.X.W, 360); ctx.restore();
+  };
+
+  // Público de la fiesta en primer plano: siluetas que saltan al beat, manos arriba con los graves
+  // y luces de celulares. Se mueve más rápido que la cámara para dar profundidad.
+  S.drawCrowd = function (ctx, G, camX, opts = {}) {
+    const X = NV.X, W = X.W, base = opts.y || 364;
+    const beat = G.beat, ph = G.phase, bass = G.bass, rim = ci(beat >> 2), hop = (1 - ph) * (1 - ph);
+    // fila de atrás (más chica, más lenta, teñida) y fila de adelante (grande, negra)
+    for (const row of [{ f: 1.15, sp: 15, s: 0.75, col: '#120e22', seed: 3, dy: -10 }, { f: 1.35, sp: 21, s: 1, col: '#030208', seed: 7, dy: 0 }]) {
+      const i0 = Math.floor((camX * row.f) / row.sp) - 2;
+      for (let i = i0; i < i0 + W / row.sp + 4; i++) {
+        const h = hash(i, row.seed), s = row.s;
+        const x = Math.round(i * row.sp - camX * row.f + (h % 7));
+        const hype = G.hype > 0, jumper = hype || hash(i + row.seed, beat) % 3 === 0;
+        const hr = Math.round((6 + (h % 2)) * s), sh = Math.round((10 + (h % 3)) * s); // radio de cabeza, medio ancho de hombros
+        const y = base + row.dy - Math.round((30 + (h % 12)) * s) - (jumper ? Math.round(hop * (hype ? 12 : 6) * s) : 0);
+        ctx.fillStyle = row.col;
+        // brazos arriba con los graves (o siempre, para algunos)
+        const arms = hype || h % 5 === 0 || (bass > 0.45 && h % 3 === 0);
+        if (arms) { const up = Math.round(hop * 3); ctx.fillRect(x - sh, y - 10 - up, 3, 16); ctx.fillRect(x + sh - 3, y - 10 - up, 3, 16); }
+        NV.Input.circ(ctx, x - sh + 4, y + hr + 5, 4); NV.Input.circ(ctx, x + sh - 4, y + hr + 5, 4); // hombros
+        ctx.fillRect(x - sh, y + hr + 5, sh * 2, 80);  // torso
+        ctx.fillRect(x - 2, y + hr - 2, 5, 8);         // cuello
+        NV.Input.circ(ctx, x, y, hr);                  // cabeza
+        // gorros de Papá Noel y vinchas de reno (con la luz del escenario)
+        if (h % 3 === 0) {
+          const hc = row.s === 1 ? '#b3132b' : '#5c0815', fur = row.s === 1 ? '#f4f8ff' : '#7a86a0';
+          ctx.fillStyle = hc; ctx.beginPath(); ctx.moveTo(x - hr, y - hr + 2); ctx.lineTo(x + hr, y - hr + 2); ctx.lineTo(x + hr + 4, y - hr * 2 - 2); ctx.closePath(); ctx.fill();
+          X.rect(x - hr, y - hr + 1, hr * 2, 2, fur); X.rect(x + hr + 2, y - hr * 2 - 4, 3, 3, fur);
+          ctx.fillStyle = row.col;
+        } else if (h % 7 === 1) {
+          const ac = row.s === 1 ? '#7a4a35' : '#3a2420';
+          X.rect(x - hr - 1, y - hr - 5, 2, 6, ac); X.rect(x - hr - 3, y - hr - 5, 2, 2, ac); X.rect(x + hr - 1, y - hr - 5, 2, 6, ac); X.rect(x + hr + 1, y - hr - 5, 2, 2, ac);
+          ctx.fillStyle = row.col;
+        }
+        // luz de los cabezales en el borde de la cabeza y hombros
+        ctx.globalAlpha = row.s === 1 ? 0.9 : 0.5;
+        X.rect(x - hr + 2, y - hr, hr * 2 - 3, 1, rim); X.rect(x - sh + 2, y + hr + 1, 4, 1, rim); X.rect(x + sh - 6, y + hr + 1, 4, 1, rim);
+        if (arms) { X.rect(x - sh, y - 10 - Math.round(hop * 3), 3, 1, rim); X.rect(x + sh - 3, y - 10 - Math.round(hop * 3), 3, 1, rim); }
+        ctx.globalAlpha = 1;
+        // celular filmando
+        if (h % 9 === 0) { const px = x + sh + 1, py = y - 18; X.rect(px, py, 5, 8, '#1a1a24'); if ((G.frame >> 3) % 5) X.rect(px + 1, py + 1, 3, 5, '#cfe3ff'); }
+      }
     }
+  };
+
+  // Nieve navideña en 3 profundidades: copos lejanos (1px), medios (2px) y cercanos con forma
+  // de cristal (cruz) que brillan de a ratos. Se mueven con el viento y con la cámara.
+  S.drawSnow = function (ctx, camX) {
+    const W = NV.X.W, wind = Math.sin(performance.now() / 2400) * 0.25;
+    snow.forEach((s, i) => {
+      s.y += s.s * (0.35 + s.z * 0.5); s.x += wind * s.z; if (s.y > 362) { s.y = -4; s.x = Math.random() * 800; }
+      let x = (s.x + Math.sin((s.y + i * 13) * 0.03) * 6 - camX * s.z * 0.45) % W; if (x < 0) x += W;
+      const X0 = Math.round(x), Y0 = Math.round(s.y);
+      ctx.globalAlpha = 0.4 + s.z * 0.6; ctx.fillStyle = '#f4f8ff';
+      if (s.z > 0.82) { // cristal
+        ctx.fillRect(X0 - 1, Y0, 3, 1); ctx.fillRect(X0, Y0 - 1, 1, 3);
+        if ((i + (performance.now() >> 7)) % 23 === 0) { ctx.fillStyle = '#ffffff'; ctx.fillRect(X0 - 2, Y0, 5, 1); ctx.fillRect(X0, Y0 - 2, 1, 5); }
+      } else ctx.fillRect(X0, Y0, s.z > 0.55 ? 2 : 1, s.z > 0.55 ? 2 : 1);
+    });
     ctx.globalAlpha = 1;
   };
 

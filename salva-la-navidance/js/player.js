@@ -35,11 +35,13 @@
       G.sfx('dash');
     }
     if (p.dash > 0) {
-      p.dash--; p.vx = p.dashDir * C.DASH_SPEED;
+      p.dash--; p.vx = p.dashDir * C.DASH_SPEED * (G.fever() ? C.FEVER_SPEED : 1);
       if (p.dash % 2 === 0) p.ghosts.push({ x: p.x, y: p.y, a: p.anim, f: p.frame, dir: p.dir, life: 10 });
       if (p.onGround && p.dash % 3 === 0) FX.part(G, { x: p.x + 7 - p.dashDir * 8, y: p.y + p.h - 2, vx: -p.dashDir * 0.5, vy: -0.4, color: '#e9f4ff', life: 14, max: 14 });
     } else if (p.hurt === 0) {
-      p.vx = ix * (p.dashJump && !p.onGround ? C.DASH_SPEED * 0.85 : C.RUN);
+      p.vx = ix * (p.dashJump && !p.onGround ? C.DASH_SPEED * 0.85 : C.RUN) * (G.fever() ? C.FEVER_SPEED : 1);
+      // FIEBRE: estela de imágenes del personaje
+      if (G.fever() && ix && G.frame % 3 === 0) p.ghosts.push({ x: p.x, y: p.y, a: p.anim, f: p.frame, dir: p.dir, life: 10 });
     }
     if (p.onGround) { p.dashJump = false; p.airDashUsed = false; }
 
@@ -49,13 +51,15 @@
     if (p.jumpBuf > 0 && p.coyote > 0 && p.hurt === 0) {
       p.vy = C.JUMP_VEL; p.jumpBuf = 0; p.coyote = 0; p.onGround = false;
       p.dashJump = p.dash > 0 || IN.held.dash; p.dash = 0;
-      G.sfx('jump');
+      G.sfx('jump'); p.sq = 1.16; // se estira al despegar
+      for (let i = 0; i < 3; i++) FX.part(G, { x: p.x + 7 + U.rand(-4, 4), y: p.y + p.h, vx: U.rand(-0.6, 0.6), vy: -U.rand(0.1, 0.4), color: '#e9f4ff', life: 10, max: 10 });
     }
     if (!IN.held.jump && p.vy < C.JUMP_CUT) p.vy = C.JUMP_CUT;
     if (!(p.dash > 0 && !p.onGround)) p.vy = Math.min(p.vy + C.GRAVITY, C.MAX_FALL);
 
     NV.Phys.move(p, L);
-    if (p.landed) { p.chain = 0; for (let i = 0; i < 4; i++) FX.part(G, { x: p.x + 7 + U.rand(-6, 6), y: p.y + p.h, vx: U.rand(-0.8, 0.8), vy: -U.rand(0.2, 0.8), color: '#e9f4ff', life: 12, max: 12 }); }
+    p.sq = (p.sq || 1) + (1 - (p.sq || 1)) * 0.22; // vuelve suave a su forma
+    if (p.landed) { p.chain = 0; p.sq = 0.84; for (let i = 0; i < 4; i++) FX.part(G, { x: p.x + 7 + U.rand(-6, 6), y: p.y + p.h, vx: U.rand(-0.8, 0.8), vy: -U.rand(0.2, 0.8), color: '#e9f4ff', life: 12, max: 12 }); }
     // último lugar seguro (para volver si se cae a un pozo)
     if (p.onGround && NV.Phys.solidAt(L, p.x + 2, p.y + p.h + 2) && NV.Phys.solidAt(L, p.x + p.w - 2, p.y + p.h + 2)) p.safe = { x: p.x + 7, y: p.y + p.h };
     if (p.y > L.h * 16 + 8) { G.pitFall(); return; }
@@ -66,9 +70,10 @@
     if (!locked && IN.held.shoot && p.shootCd === 0 && p.hurt === 0) {
       const mine = G.bullets.filter((b) => b.mine).length;
       if (mine < C.SHOT_MAX) {
-        G.bullets.push({ mine: true, x: p.x + 7 + p.dir * 18, y: p.y + p.h - 27, vx: p.dir * C.SHOT_SPEED, vy: 0, r: 4, life: C.SHOT_LIFE, dmg: C.SHOT_DMG, kind: 'shot_' + p.key, t: 0 });
+        // sale pegado al cañón (si sale 18 px adelante, a quemarropa pasa de largo) y a media altura del cuerpo
+        G.bullets.push({ mine: true, x: p.x + 7 + p.dir * 6, y: p.y + p.h - 24, vx: p.dir * C.SHOT_SPEED, vy: 0, r: 6, life: C.SHOT_LIFE, dmg: C.SHOT_DMG, kind: 'shot_' + p.key, t: 0 });
         p.shootCd = C.SHOT_COOLDOWN; p.shootPose = 14; G.sfx('shoot');
-        FX.part(G, { x: p.x + 7 + p.dir * 20, y: p.y + p.h - 27, color: '#ffffff', life: 4, max: 4, size: 3 });
+        G.muzzle = { x: p.x + 7 + p.dir * 16, y: p.y + p.h - 24, t: 5, c: p.hero.light };
       }
     }
 
@@ -95,7 +100,7 @@
 
   NV.hurtPlayer = function (p, G, srcX, dmg = 1) {
     if (p.dead || p.invuln > 0 || p.shield > 0 || G.state !== 'play') return false;
-    p.hp -= dmg; G.shake(5); G.hitstop = 4;
+    p.hp -= dmg; G.shake(5); G.hitstop = 4; G.vib(45); G.breakCombo();
     if (p.hp <= 0) { NV.killPlayer(p, G); return true; }
     p.dir = srcX > p.x + 7 ? 1 : -1; p.hurt = 16; p.invuln = C.INVULN; p.vy = Math.min(p.vy, -2.4);
     G.sfx('hurt'); G.flash('#ff2e4a', 6);
@@ -103,7 +108,7 @@
   };
   NV.killPlayer = function (p, G) {
     if (p.dead) return;
-    p.dead = true; p.deadT = 0; p.vx = p.vy = 0; p.hp = 0;
+    p.dead = true; p.deadT = 0; p.vx = p.vy = 0; p.hp = 0; G.vib(120);
     G.sfx('die_' + p.key); G.shake(7); G.deaths++;
   };
 
@@ -122,11 +127,11 @@
 
   NV.drawPlayer = function (ctx, p, G, cx, cy) {
     const X = NV.X; const fx = p.x + 7 - cx, fy = p.y + p.h - cy;
-    for (const g of p.ghosts) X.hero(p.key, g.a, g.f, g.x + 7 - cx, g.y + p.h - cy, g.dir < 0, true, (g.life / 10) * 0.4);
+    for (const g of p.ghosts) X.hero(p.key, g.a, g.f, g.x + 7 - cx, g.y + p.h - cy, g.dir < 0, true, (g.life / 10) * 0.22);
     if (p.dead) { drawDeath(ctx, p, G, fx, fy); return; }
     if (p.invuln > 0 && p.hurt === 0 && (G.frame >> 2) % 2 === 0) return;
     const flash = p.hurt > 0 && (G.frame >> 1) % 2 === 0;
-    X.hero(p.key, p.anim, p.frame, fx, fy, p.dir < 0, flash);
+    X.hero(p.key, p.anim, p.frame, fx, fy, p.dir < 0, flash, undefined, p.sq);
     if (p.shield > 0) { // escudo dorado
       const blink = p.shield < 120 && (G.frame >> 2) % 2;
       if (!blink) {

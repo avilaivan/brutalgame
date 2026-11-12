@@ -5,7 +5,7 @@
 // =====================================================================
 (function () {
   const MD = window.MUSIC_DATA;
-  const A = { ctx: null, cur: null, el: {}, muted: false, fake0: performance.now() / 1000, env: {}, vol: 0.85 };
+  const A = { ctx: null, cur: null, el: {}, muted: false, fake0: performance.now() / 1000, env: {}, vol: NV.OPT.music / 10 };
   let sfxBus, master, noiseBuf;
 
   // decodificar envolventes de energía (base64 -> bytes)
@@ -21,7 +21,7 @@
   // preload 'none': cada canción se descarga recién cuando suena (en el menú o al elegir DJ),
   // así el celular no baja los ~13 MB de las 3 canciones al abrir el juego.
   for (const k in MD) {
-    const el = new Audio(); el.src = MD[k].file; el.preload = 'none'; el.loop = true; el.volume = A.vol;
+    const el = new Audio(); el.src = MD[k].file + '?v=' + NV.VERSION; el.preload = 'none'; el.loop = true; el.volume = A.vol;
     A.el[k] = el;
   }
 
@@ -30,7 +30,7 @@
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
     A.ctx = new AC();
     master = A.ctx.createGain(); master.gain.value = A.muted ? 0 : 1; master.connect(A.ctx.destination);
-    sfxBus = A.ctx.createGain(); sfxBus.gain.value = 0.55; sfxBus.connect(master);
+    sfxBus = A.ctx.createGain(); sfxBus.gain.value = 0.55 * NV.OPT.sfx / 7; sfxBus.connect(master);
     noiseBuf = A.ctx.createBuffer(1, A.ctx.sampleRate, A.ctx.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     // iOS: "preparar" las canciones dentro del primer toque
@@ -55,6 +55,11 @@
   A.stop = function () { for (const o in A.el) A.el[o].pause(); };
   A.pause = function () { if (A.cur) A.el[A.cur].pause(); };
   A.resume = function () { if (A.cur) { const p = A.el[A.cur].play(); if (p) p.catch(() => {}); } };
+  // aplica los volúmenes de NV.OPT (0-10); efectos: 7 = volumen original
+  A.applyOpts = function () {
+    A.vol = NV.OPT.music / 10; for (const o in A.el) A.el[o].volume = A.vol;
+    if (sfxBus) sfxBus.gain.value = 0.55 * NV.OPT.sfx / 7;
+  };
   A.toggleMute = function () {
     A.muted = !A.muted;
     for (const o in A.el) A.el[o].muted = A.muted;
@@ -131,6 +136,19 @@
       case 'die_hades': for (let i = 0; i < 6; i++) osc('square', 1500 - i * 200, t + i * 0.05, 0.05, 0.07); noise(t, 0.5, 0.15, 'highpass', 5000); break;
       case 'die_matias': osc('sine', 1200, t, 0.7, 0.14, { to: 60 }); osc('triangle', 600, t, 0.7, 0.08, { to: 30 }); break;
       case 'win': [72, 76, 79, 84, 79, 84, 88].forEach((m, i) => osc('square', mtof(m), t + i * 0.11, 0.16, 0.08)); break;
+      // splash del estudio: golpe de bajo + arpegio que sube + brillo
+      case 'logo': osc('sine', 110, t, 0.9, 0.35, { to: 38 }); noise(t, 0.25, 0.12, 'lowpass', 1800, 120);
+        [48, 55, 60, 64, 67, 72].forEach((m, i) => osc('square', mtof(m + 12), t + 0.55 + i * 0.07, 0.18, 0.05));
+        osc('triangle', mtof(96), t + 1.05, 0.9, 0.05); break;
+      // ovación del público: ruido que crece + silbidos
+      case 'cheer': noise(t, 1.8, 0.16, 'bandpass', 1400, 2200); for (let i = 0; i < 5; i++) osc('sine', 1200 + i * 180, t + 0.15 + i * 0.22, 0.3, 0.03, { to: 2200 + i * 150 }); break;
+      // FIEBRE: barrido que sube + acorde brillante
+      case 'fever': osc('sawtooth', 220, t, 0.45, 0.07, { to: 1760, lp: 4000 }); [72, 76, 79, 84].forEach((m) => osc('square', mtof(m), t + 0.3, 0.3, 0.04)); break;
+      // corte de luz: zumbido que se apaga
+      case 'blackout': osc('sawtooth', 60, t, 1.2, 0.18, { to: 20, lp: 600 }); noise(t, 0.3, 0.2, 'highpass', 3000); break;
+      // cascabeles de trineo + campanitas
+      case 'jingle': for (let i = 0; i < 6; i++) noise(t + i * 0.07, 0.06, 0.07, 'bandpass', 7200, 9000); [88, 91, 96].forEach((m, i) => osc('triangle', mtof(m), t + 0.05 + i * 0.09, 0.25, 0.05)); break;
+      case 'medal': osc('square', 140, t, 0.12, 0.2, { to: 60 }); noise(t, 0.18, 0.15, 'lowpass', 2500, 300); [79, 84, 88, 91].forEach((m, i) => osc('square', mtof(m), t + 0.12 + i * 0.06, 0.12, 0.06)); break;
       case 'timeout': [72, 67, 64, 60].forEach((m, i) => osc('square', mtof(m), t + i * 0.18, 0.22, 0.08)); break;
     }
   };

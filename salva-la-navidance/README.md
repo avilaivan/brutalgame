@@ -37,8 +37,12 @@ Los datos se guardan en `data/scores.json`. Para empezar el ranking de cero, bor
 
 ## 2. Reglas del juego
 
-- **Un solo nivel** con 3 zonas (Túneles Criogénicos, Torres de Neón, Azotea BRUTAL.) y el **Cyber-Grinch** como jefe final.
-- El reloj arranca con la cuenta regresiva (3, 2, 1, ¡YA!, al ritmo de la canción) y se frena con el golpe final al Grinch.
+- **La historia:** es Nochebuena en **9 de Julio**, nieva sobre la ciudad y **MECHA-NOEL**, un Papá Noel robot gigante, quiere robarse la Navidance. Tu DJ tiene que cruzar la ciudad y vencerlo.
+- **Un solo nivel** con 3 zonas: **Ruta 5 nevada** (silos y campo), **Centro navideño** (catedral, palacio municipal, árbol gigante de la plaza, cartel BRUTAL.) y **Autódromo**, con **MECHA-NOEL** como jefe final.
+- **Enemigos:** Muñecos Patovica (muñecos de nieve que saltan al beat), Regalos Poseídos (disparan bastones de caramelo), Esferas Malditas (bolas de árbol que vuelan) y Duendes Traviesos que tiran bolas de Navidad.
+- **Plataformas:** todas se alcanzan con un salto (verificado con una simulación). Los bafles y las consolas del escenario también se pueden pisar.
+- **Combo y FIEBRE:** encadená 5 enemigos sin cortar el combo (2,5 s entre uno y otro) y entrás en **FIEBRE BRUTAL**: corrés más rápido mientras sigas el combo. Si te pegan, se corta.
+- El reloj arranca con la cuenta regresiva (3, 2, 1, ¡YA!, al ritmo de la canción) y se frena con el golpe final a Mecha-Noel.
 - **Límite: 3 minutos.** Si se termina el tiempo, no entra al ranking.
 - Si te matan, volvés al último checkpoint (sin game over), pero el reloj sigue corriendo.
 - La pausa **no** frena el reloj (es una carrera: el tiempo es real).
@@ -54,6 +58,18 @@ Los datos se guardan en `data/scores.json`. Para empezar el ranking de cero, bor
 | Disparar (mantener = ráfaga) | DISP | X / J | X |
 | Dash (también en el aire) | DASH | C / Shift | B / RB |
 | Pausa | II | Esc / P | Start |
+| Reiniciar al instante | (desde la pausa) | R | Select |
+
+### Opciones
+Desde el título o la pausa: volumen de música y efectos, vibración (Android) y **destellos y temblor** (apagarlo quita los flashes de pantalla y las sacudidas de cámara, para gente sensible a las luces). Quedan guardadas en cada celular.
+
+### Compartir
+- **En resultados**, COMPARTIR arma una placa para historias de Instagram (1080×1920).
+- **El link del juego** muestra vista previa con imagen al pegarlo en WhatsApp o Instagram (`assets/img/og.png`), y se puede agregar a la pantalla de inicio del celular con ícono propio.
+
+### Ghost, medallas y rango
+- **Ghost:** tu mejor partida corre al lado tuyo como silueta blanca, y en la barra de progreso hay una marca blanca con su posición.
+- **Medallas:** al terminar recibís un rango según tu tiempo: **S** < 60 s, **A** < 75 s, **B** < 95 s, **C** el resto. Se ajustan en `js/core.js` (`MEDALS`) cuando haya tiempos reales de la fiesta.
 
 - **Pisotón:** caer encima de un enemigo común lo elimina y te hace rebotar (encadená pisotones para más puntos).
 - **Escudo dorado:** 8 segundos inmune. Si tocás enemigos con el escudo, los rompés. Después se rompe solo.
@@ -66,12 +82,13 @@ Corren, saltan y disparan **exactamente igual** (mismo alcance, mismo daño). Ca
 - **Hades (azul):** se electrocuta, glitchea y se desintegra en píxeles.
 - **Matias (verde):** implota en ondas de sintetizador.
 
-### Cyber-Grinch (jefe final)
+### MECHA-NOEL (jefe final)
 Ataca **al ritmo de la canción**, un ataque por compás:
 - **Láser de sus lentes:** apunta (línea punteada roja y verde) y en el siguiente beat dispara. Hay que moverse o hacer dash.
-- **Lluvia de adornos:** una marca roja en el piso avisa dónde va a caer.
-- **Pisotón:** manda una onda verde por el piso; hay que saltarla.
-- **Descanso:** su núcleo brilla y recibe **doble daño**.
+- **Lluvia de bolas de Navidad:** una marca roja en el piso avisa dónde va a caer.
+- **Pisotón:** manda una onda de nieve y hielo por el piso; hay que saltarla.
+- **Descanso:** la hebilla de su cinturón brilla y recibe **doble daño**.
+- **SE CORTÓ LA NAVIDAD:** a la mitad de la vida se apagan las luces (solo queda un círculo de luz alrededor tuyo) y ataca más seguido.
 - También se le puede saltar en la cabeza (3 de daño).
 - A la mitad de la vida entra en **furia** y ataca más seguido.
 
@@ -84,8 +101,8 @@ Las canciones fueron analizadas (BPM, beat y energía de graves/medios/agudos en
 - los cabezales móviles barren el escenario al ritmo y se encienden con los graves,
 - las guirnaldas, árboles, carteles de neón y el cartel BRUTAL. titilan en cada beat,
 - los bafles laten con el bajo y aparecen láseres en los momentos más fuertes,
-- los enemigos saltan, disparan y tiran adornos sobre el beat,
-- el Grinch elige y lanza sus ataques al compás.
+- los enemigos saltan, disparan y tiran bolas de Navidad sobre el beat,
+- Mecha-Noel elige y lanza sus ataques al compás.
 
 **Para cambiar una canción:** reemplazá el mp3 en `assets/music/` con el mismo nombre (`ivan.mp3`, `hades.mp3`, `matias.mp3`) y pedime que regenere el análisis. Si no, las luces siguen el análisis de la canción anterior.
 
@@ -115,7 +132,7 @@ css/style.css         estilo 8-bit del registro
 js/core.js            ⚙ TODOS los números del juego (vida, velocidad, dash, escudo, 3 minutos…)
 js/level.js           el mapa: dónde va cada enemigo, moneda, ítem y checkpoint
 js/player.js          movimiento, disparo y las 3 muertes
-js/enemies.js         enemigos 8-bit y el Cyber-Grinch
+js/enemies.js         enemigos navideños y Mecha-Noel
 js/stage.js           escenario, luces de boliche, láseres, guirnaldas
 js/audio.js           canciones, beat y efectos de sonido
 js/db.js              conexión con el ranking (servidor / Supabase / local)
@@ -123,7 +140,8 @@ js/screens.js         título, elegir DJ, resultados, ranking, pausa
 js/hud.js             cronómetro, vidas, monedas, barra del jefe
 js/gfx.js             pantalla nítida, fuente pixel, sprites
 assets/sprites/       héroes (de tus animaciones) + enemigos, jefe e ítems 8-bit
-assets/bg/            escenario 8-bit (cielo, ciudad, obelisco, cartel BRUTAL., tiles)
+assets/bg/            escenario 8-bit de 9 de Julio en Navidad (cielo con trineo, campo y silos, centro, primer plano, tiles)
+tools/arte.py         genera TODO el arte de fondo, tiles, enemigos y jefe (python tools/arte.py)
 assets/fonts/         fuente pixel BRUTAL8 (diseñada para el juego)
 assets/music/         una canción por DJ
 ```
@@ -133,4 +151,11 @@ assets/music/         una canción por DJ
 - `?hero=ivan&boss=1`: arranca en el jefe final.
 - `?debug`: muestra errores en pantalla.
 
-Nota: "Grinch" es un personaje con derechos de autor. Para una fiesta privada no suele ser problema; si el juego se publica abierto o con fines comerciales, conviene cambiarle el nombre.
+
+## 6. Arte
+
+El escenario, los tiles, los enemigos y MECHA-NOEL están dibujados píxel por píxel por código en `tools/arte.py` (sin IA, con paleta propia). Para retocar algo:
+
+1. Cambiar la función que lo dibuja en `tools/arte.py` (por ejemplo `catedral()` o `patovica()`).
+2. Correr `python tools/arte.py` (necesita Python con Pillow).
+3. Subir `NV.VERSION` en `js/core.js` para que los celulares no muestren el arte viejo guardado en caché.
