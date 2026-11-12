@@ -40,6 +40,12 @@
     return null;
   };
 
+  // ---------- largada ("¡YA!"): el servidor arranca su propio reloj ----------
+  DB.go = function (token, playerId) {
+    if (DB.mode !== 'server' || !token) return;
+    fetch(C.API_BASE + '/api/run/go', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, playerId }) }).catch(() => {});
+  };
+
   // ---------- enviar tiempo ----------
   DB.submit = async function (run) {
     // run: { name, ig, playerId, hero, timeMs, coins, deaths, token }

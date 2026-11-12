@@ -179,7 +179,7 @@
     const X = NV.X, W = X.W;
     ctx.fillStyle = 'rgba(5,4,12,.75)'; ctx.fillRect(0, 0, W, 360);
     X.text('PAUSA', W / 2, 70, { scale: 4, align: 'center', color: '#f5c542', outline: true });
-    X.text('EL RELOJ ESTÁ DETENIDO', W / 2, 108, { align: 'center', color: '#8ea2c4' });
+    X.text('EL RELOJ SIGUE CORRIENDO', W / 2, 108, { align: 'center', color: '#8ea2c4' });
     menu(G, [
       { label: 'CONTINUAR', x: W / 2, y: 150, w: 200, act: () => G.unpause() },
       { label: 'REINICIAR', x: W / 2, y: 186, w: 200, act: () => { G.paused = false; G.startRun(G.heroKey); } },

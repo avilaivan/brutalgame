@@ -22,7 +22,7 @@ npm start
 > También funciona con *Live Server* o con doble click en `index.html`, pero en ese caso el ranking queda guardado **solo en ese dispositivo**. Para el ranking compartido de la fiesta usá `npm start`.
 
 ### Clave del panel admin
-Por defecto es `brutal-admin`. **Cambiala** antes de la fiesta:
+Si no la definís, el servidor genera una clave al azar cada vez que arranca y la muestra en la terminal. Para la fiesta, fijá una propia:
 
 ```
 # Windows (PowerShell)
@@ -41,6 +41,7 @@ Los datos se guardan en `data/scores.json`. Para empezar el ranking de cero, bor
 - El reloj arranca con la cuenta regresiva (3, 2, 1, ¡YA!, al ritmo de la canción) y se frena con el golpe final al Grinch.
 - **Límite: 3 minutos.** Si se termina el tiempo, no entra al ranking.
 - Si te matan, volvés al último checkpoint (sin game over), pero el reloj sigue corriendo.
+- La pausa **no** frena el reloj (es una carrera: el tiempo es real).
 - Si caés a un pozo, volvés al último piso seguro y perdés 1 corazón.
 - **Ranking:** mejor tiempo de cada jugador. Desempata el que juntó más B-Coins.
 - Los enemigos están **siempre en el mismo lugar**: es una carrera, se puede aprender el recorrido.
@@ -99,7 +100,7 @@ Las canciones fueron analizadas (BPM, beat y energía de graves/medios/agudos en
 2. En `js/core.js` completá `SUPABASE: { url: '...', anonKey: '...' }`.
 3. Los Instagram se ven en Supabase → *Table Editor* → `scores`.
 
-> **Anti-trampa:** con `server.js`, cada partida recibe un token cuando empieza y el servidor rechaza tiempos más rápidos que lo que realmente pasó, tiempos de menos de 30 s y partidas repetidas. Con Supabase no hay esa validación, así que antes de entregar premios conviene revisar el Top.
+> **Anti-trampa:** con `server.js`, cada partida recibe un token firmado y el servidor anota la largada ("¡YA!") con su propio reloj. Rechaza tiempos que no coinciden con lo que midió él (±3 s de margen por la red), tiempos por debajo de `MIN_SEC` (35 s por defecto: ajustalo al récord real después de probar) y partidas repetidas. Igual, a los ganadores conviene pedirles que repitan una partida en persona antes de dar premios. Con Supabase no hay esa validación, así que antes de entregar premios conviene revisar el Top.
 
 ---
 

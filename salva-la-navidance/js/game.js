@@ -39,7 +39,7 @@
     // la canción del personaje arranca desde el principio; cuenta regresiva de 4 beats
     A.play(hero, 0);
     G.countBeat = null; G.count = 0;
-    G.token = null; NV.DB.startRun(prof, hero).then((t) => { G.token = t; });
+    G.token = null; G.tokenP = NV.DB.startRun(prof, hero); G.tokenP.then((t) => { G.token = t; });
     if (params.get('boss')) { G.cp = 3; G.respawnAt(G.L.checkpoints[3]); }
   };
 
@@ -103,11 +103,14 @@
       if (G.countBeat === null && G.beatTick) G.countBeat = G.beat;
       if (G.countBeat !== null) {
         const n = 4 - (G.beat - G.countBeat);
-        if (G.beatTick) { if (n > 0) { G.sfx('beep'); G.say(String(n), { scale: 6, life: 26, color: p.hero.light }); } else { G.sfx('go'); G.say('¡YA!', { scale: 6, life: 40, color: '#f5c542' }); G.running = true; G.say('¡YA!', { scale: 6, life: 40, color: '#f5c542', sub: 'LLEGÁ AL GRINCH Y VENCELO', subColor: '#ffffff' }); } }
+        if (G.beatTick) { if (n > 0) { G.sfx('beep'); G.say(String(n), { scale: 6, life: 26, color: p.hero.light }); } else { G.sfx('go'); G.running = true; G.t0 = performance.now();
+          // el servidor anota la largada: el tiempo final tiene que coincidir con su reloj
+          const pid = G.profile.id; G.tokenP.then((t) => NV.DB.go(t, pid)); G.say('¡YA!', { scale: 6, life: 40, color: '#f5c542', sub: 'LLEGÁ AL GRINCH Y VENCELO', subColor: '#ffffff' }); } }
       }
     }
     if (G.running) {
-      G.runTime += 1 / 60;
+      // reloj real: sigue corriendo en pausa o si el celular se traba (igual que el del servidor)
+      G.runTime = (performance.now() - G.t0) / 1000;
       if (G.runTime >= C.TIME_LIMIT) { G.running = false; G.sfx('timeout'); G.heroKeyLast = G.heroKey; G.go('timeout'); return; }
     }
     if (G.finished) { G.finishT++; if (G.finishT > 240) { G.go('results'); return; } }
@@ -258,9 +261,10 @@
 
   let last = performance.now(), acc = 0;
   function loop(now) {
+    requestAnimationFrame(loop); // primero: si un cuadro tira error, el juego no queda congelado
     acc += Math.min(100, now - last); last = now;
     let n = 0; while (acc >= 1000 / 60 && n < 4) { update(); acc -= 1000 / 60; n++; }
-    draw(); requestAnimationFrame(loop);
+    draw();
   }
 
   // ---------------- REGISTRO (formulario) ----------------
