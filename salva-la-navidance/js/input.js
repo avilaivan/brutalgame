@@ -102,7 +102,15 @@
       ctx.fillStyle = '#0b0a12'; circ(ctx, b.cx, b.cy, b.r + 2);
       ctx.fillStyle = '#ffffff'; circ(ctx, b.cx, b.cy, b.r);
       ctx.fillStyle = on ? '#ffffff' : b.color; circ(ctx, b.cx, b.cy, b.r - 3);
-      X.text(b.label, b.cx, b.cy - 4, { scale: b.r > 30 ? 2 : 1, align: 'center', color: on ? '#0b0a12' : '#ffffff', shadow: !on });
+      X.text(b.label, b.cx, b.cy - 4, { scale: b.r > 30 ? 2 : 1, align: 'center', color: on ? '#0b0a12' : '#ffffff', shadow: !on, fancy: false });
+      // anillo de estado: energía del dash / calor del arma
+      const p = NV.G && NV.G.player;
+      if (p && (k === 'dash' || k === 'shoot')) {
+        const v = k === 'dash' ? p.energy / 100 : p.heat / 100;
+        ctx.globalAlpha = 0.95; ctx.lineWidth = 3;
+        ctx.strokeStyle = k === 'dash' ? (p.energy >= NV.CFG.DASH_COST ? '#4de2ff' : '#1a8fb3') : (p.overheat ? '#ff2e4a' : '#f5c542');
+        ctx.beginPath(); ctx.arc(b.cx, b.cy, b.r + 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * v); ctx.stroke();
+      }
     }
     ctx.restore();
   };

@@ -36,7 +36,7 @@
     G.bullets = []; G.parts = []; G.booms = []; G.texts = []; G.marks = []; G.corpses = [];
     G.cp = 0; G.runTime = 0; G.running = false; G.finished = false; G.finishT = 0;
     G.coinsGot = 0; G.score = 0; G.kills = 0; G.deaths = 0; G.splits = [];
-    G.bossOn = false; G.boss = null; G.banner = null; G.paused = false; G.vsT = 0; G.hype = 0; G.combo = 0; G.comboT = 0; G.gIdx = 0; G.gDelta = null; G.coinPop = 0; G.hpLost = 0; G.tip = (G.tip || Math.floor(Math.random() * 9)) + 1;
+    G.bossOn = false; G.boss = null; G.banner = null; G.paused = false; G.vsT = 0; G.hype = 0; G.intensity = 0; G.drop = 0; G.combo = 0; G.comboT = 0; G.gIdx = 0; G.gDelta = null; G.coinPop = 0; G.hpLost = 0; G.tip = (G.tip || Math.floor(Math.random() * 9)) + 1;
     const c0 = G.L.checkpoints[0];
     G.player = NV.Player(hero, c0.x, c0.y);
     G.ghostRec = []; G.ghost = NV.DB.ghost();
@@ -146,6 +146,10 @@
 
     if (G.hitstop > 0) { G.hitstop--; return; }
     if (G.comboT > 0 && --G.comboT === 0) G.breakCombo();
+    // intensidad de la fiesta (0 al principio, 1 en el jefe): más láseres, luces, estrobo y euforia
+    const target = G.bossOn ? 1 : U.clamp(p.x / L.arena.x0, 0, 1) * 0.85 + (G.fever() ? 0.15 : 0);
+    G.intensity = U.lerp(G.intensity || 0, target, 0.02);
+    if (G.drop > 0) G.drop--;
 
     NV.updatePlayer(p, G, !G.running && !G.finished);
     // grabar el recorrido para el ghost (30 muestras por segundo; 0 = muerto/invisible)
@@ -165,6 +169,7 @@
         const pbS = NV.DB.splits()[i]; let sub = U.fmtTime(G.runTime), sc = '#ffffff';
         if (pbS) { const d = G.runTime - pbS; sub += '  ' + (d < 0 ? '-' : '+') + Math.abs(d).toFixed(2); sc = d < 0 ? '#33e07a' : '#ff2e4a'; }
         G.say(c.label, { sub, subColor: sc, life: 100 }); G.hype = 50;
+        if (i < L.checkpoints.length - 1) dropFX(i); // zonas 2 y 3 (el jefe tiene su presentación)
       }
     }
     // entrada a la arena del jefe
@@ -218,7 +223,7 @@
       // proyectiles enemigos
       if (b.wave) { if (b.x < L.arena.x0 + 4) b.dead = true; }
       else if (b.bomb) {
-        const floorHit = b.rain ? b.y >= L.arena.floorY - 4 : (b.vy > 0 && NV.Phys.groundAt(L, b.x, b.y + 4));
+        const floorHit = b.rain ? b.y >= b.landY - 4 : (b.vy > 0 && NV.Phys.groundAt(L, b.x, b.y + 4));
         if (floorHit) { explode(b); continue; }
       } else if (NV.Phys.solidAt(L, b.x, b.y)) { b.dead = true; continue; }
       if (!p.dead && hitRect(b, NV.playerBox(p))) {
@@ -241,6 +246,7 @@
     const cx = Math.round(G.camX) + sx, cy = G.camY + sy;
     NV.Stage.drawBack(ctx, G, cx);
     NV.Stage.drawTint(ctx, G);
+    NV.Stage.drawLasers(ctx, G);
     NV.Stage.drawLights(ctx, G, cx);
     NV.Stage.drawTruss(ctx, G, cx);
     NV.Stage.drawDeco(ctx, G, cx, cy);
@@ -249,7 +255,7 @@
     // balizas de checkpoint y puerta
     L.checkpoints.forEach((c, i) => { if (i > 0) X.spr('beacon', i <= G.cp ? 1 : 0, c.x - cx, c.y - cy); });
     const dx = L.bossDoor - cx; if (dx > -50 && dx < W + 10 && !G.bossOn) { ctx.drawImage(X.img.deco_door, Math.round(dx), NV.GR * 16 - 96 - cy); X.text('JEFE', dx + 20, NV.GR * 16 - 110 - cy, { align: 'center', color: (G.frame >> 4) % 2 ? '#ff2e4a' : '#ff9aa8', outline: true }); }
-    for (const m of G.marks) { if ((m.life >> 2) % 2) X.rect(m.x - 10 - cx, L.arena.floorY - 3 - cy, 20, 3, '#ff2e4a'); }
+    for (const m of G.marks) { if ((m.life >> 2) % 2) X.rect(m.x - 10 - cx, (m.y || L.arena.floorY) - 3 - cy, 20, 3, '#ff2e4a'); }
     for (const it of G.items) NV.drawItem(it, cx, cy, G);
     for (const c of G.coins) NV.drawCoin(c, cx, cy, G.frame);
     for (const e of G.enemies) if (e.x - cx > -40 && e.x - cx < W + 40) NV.drawEnemy(e, cx, cy);
@@ -283,10 +289,14 @@
       for (let i = 0; i < 9; i++) { const ly = (i * 41 + G.frame * 3) % 300 + 40, lx = (i * 97 - G.frame * 22 * (G.player.dir || 1)) % (W + 120); ctx.fillRect(((lx % (W + 120)) + W + 120) % (W + 120) - 60, ly, 40 + (i % 3) * 20, 1); }
       ctx.restore();
     }
+    NV.Stage.drawHaze(ctx, G);
     NV.Stage.drawCrowd(ctx, G, cx);
     NV.Stage.drawSnow(ctx, cx);
     FX.drawTexts(G, cx, cy);
     if (G.flashT > 0) { ctx.globalAlpha = G.flashT / 18; ctx.fillStyle = G.flashC; ctx.fillRect(0, 0, W, 360); ctx.globalAlpha = 1; G.flashT--; }
+    NV.Stage.drawStrobe(ctx, G);
+    // última vida: el borde de la pantalla late en rojo
+    if (G.player.hp === 1 && !G.player.dead) { ctx.globalAlpha = 0.35 + 0.25 * Math.sin(G.frame * 0.15); ctx.drawImage(vignette(), 0, 0, W, 360); ctx.globalAlpha = 1; }
     NV.HUD.draw(ctx, G);
     // controles durante la cuenta regresiva (en celular los botones ya tienen nombre)
     if (!G.running && !G.finished) {
@@ -300,6 +310,25 @@
     if (G.paused) NV.Screens.pause(ctx, G);
   }
 
+  let vig = null;
+  function vignette() {
+    if (vig) return vig;
+    vig = document.createElement('canvas'); vig.width = 320; vig.height = 180; const g = vig.getContext('2d');
+    const gr = g.createRadialGradient(160, 90, 60, 160, 90, 190); gr.addColorStop(0, 'rgba(255,0,30,0)'); gr.addColorStop(1, 'rgba(255,0,30,0.85)');
+    g.fillStyle = gr; g.fillRect(0, 0, 320, 180); return vig;
+  }
+
+  // DROP: cada zona nueva sube la fiesta de golpe (luces a full, estrobo, cañones de papel picado)
+  function dropFX(i) {
+    G.drop = 75; G.hype = 180; G.sfx('fever'); G.shake(5); G.vib([30, 40, 60]);
+    FX.text(G, i >= 2 ? '¡A FULL!' : '¡SUBE LA FIESTA!', G.player.x + 7, G.player.y - 40, '#ff4fd8', 2, 70);
+    const cols = ['#ff2e4a', '#33e07a', '#f5c542', '#4de2ff', '#ff4fd8', '#ffffff'];
+    for (const side of [0, 1]) for (let k = 0; k < 40; k++) {
+      const x = G.camX + (side ? X.W - 10 : 10), y = G.camY + 340;
+      FX.part(G, { x, y, vx: (side ? -1 : 1) * U.rand(1, 4.5), vy: -U.rand(4, 8.5), g: 0.12, drag: 0.985, color: cols[k % cols.length], life: 90, max: 90, size: k % 3 ? 2 : 3 });
+    }
+  }
+
   // Un consejo distinto en cada cuenta regresiva
   const TIPS = [
     'MANTENÉ SALTO PARA SALTAR MÁS ALTO',
@@ -311,6 +340,10 @@
     'CON EL ESCUDO DORADO ROMPÉS ENEMIGOS AL TOCARLOS',
     'LA SILUETA BLANCA ES TU MEJOR PARTIDA: ¡GANALE!',
     'EL JEFE ATACA AL RITMO: ESCUCHÁ LA CANCIÓN',
+    'DISPARÁ EN RÁFAGAS: SI NO SOLTÁS, EL ARMA SE RECALIENTA',
+    'EL DASH GASTA ENERGÍA: MIRÁ LA BARRA CELESTE',
+    'EN FIEBRE EL ARMA SE ENFRÍA Y EL DASH SE CARGA MÁS RÁPIDO',
+    'SI TE PEGÁS AL JEFE, TE TIRA UN MANOTAZO',
   ];
 
   // Presentación del jefe: tu DJ entra por la izquierda, Mecha-Noel por la derecha, "VS" en el medio

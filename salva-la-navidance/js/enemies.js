@@ -122,11 +122,21 @@
   // =====================================================================
   const GM = () => window.ART_DATA.sprites.noel;
   NV.Boss = function (A) {
-    return { cx: A.bossX, by: A.bossY, w: 84, h: 118, hp: 70, maxHp: 70, phase: 1, active: false, dead: false, deathT: 0,
+    return { cx: A.bossX, by: A.bossY, w: 100, h: 118, hp: 100, maxHp: 100, swatT: 0, swatCd: 0, stompCd: 0, phase: 1, active: false, dead: false, deathT: 0,
       frame: 0, flash: 0, atk: 'intro', bar: -1, startBeat: 0, aims: [], beams: 0, seq: 0, hurtT: 0 };
   };
   const box = (b) => ({ x: b.cx - b.w / 2, y: b.by - b.h, w: b.w, h: b.h });
   NV.bossBox = box;
+  // donde termina un rayo: sigue la línea ojo -> objetivo hasta el piso o el borde izquierdo de la arena
+  function beamEnd(L0, tx, ty, A) {
+    const dx = tx - L0.x, dy = ty - L0.y; let t = 4;
+    if (dy > 0.01) t = Math.min(t, (A.floorY - L0.y) / dy);
+    if (dx < -0.01) t = Math.min(t, (A.x0 - L0.x) / dx);
+    t = Math.max(1, t);
+    return { x: L0.x + dx * t, y: L0.y + dy * t };
+  }
+  // primera superficie donde cae algo soltado desde arriba en x (piso o plataforma)
+  function landY(L, x, A) { for (let y = 0; y < A.floorY; y += 4) if (NV.Phys.groundAt(L, x, y)) return Math.floor(y / 16) * 16; return A.floorY; }
   function lens(b, which) { const m = GM(); const l = which ? m.lensR : m.lensL; return { x: b.cx - m.w / 2 + l[0] + 3, y: b.by - m.h + l[1] }; }
 
   NV.updateBoss = function (b, G) {
@@ -146,14 +156,18 @@
     if (G.beatTick) {
       const rel = G.beat - b.startBeat, inBar = ((rel % 4) + 4) % 4;
       if (inBar === 0) {
-        const seq1 = ['laser', 'rain', 'slam', 'laser', 'rest'], seq2 = ['laser', 'slam', 'laser', 'rain'];
+        const seq1 = ['laser', 'rain', 'volley', 'slam', 'laser', 'rest'], seq2 = ['laser', 'volley', 'slam', 'laser', 'rain', 'volley', 'laser', 'rest'];
         const s = b.phase === 1 ? seq1 : seq2; b.atk = s[b.seq++ % s.length]; b.inBar = 0;
       } else b.inBar = inBar;
       onBeat(b, G, b.inBar);
     }
     // ---- láser: apuntar y disparar ----
     if (b.atk === 'laser') {
-      if (b.aimLive) { const t = p.x + 7; b.aims = [{ x: t, y: A.floorY }, { x: t + (p.vx || 0) * 24 + 26 * (p.dir || 1), y: A.floorY }]; }
+      if (b.aimLive) {
+        // apunta al CUERPO del jugador (antes apuntaba siempre al piso de la arena: en una plataforma el rayo pasaba por debajo)
+        const tx = p.x + 7, ty = p.y + 17;
+        b.aims = [beamEnd(lens(b, 0), tx, ty, A), beamEnd(lens(b, 1), tx + (p.vx || 0) * 22 + 22 * (p.dir || 1), ty, A)];
+      }
       if (b.beams > 0) {
         b.beams--;
         for (let i = 0; i < 2; i++) {
@@ -164,13 +178,31 @@
       }
     }
     // frame
-    b.frame = b.atk === 'laser' ? (b.beams > 0 ? 3 : b.aimLive ? 2 : 0) : b.atk === 'slam' && b.inBar === 0 ? 4 : (G.beat & 1);
+    b.frame = b.atk === 'laser' ? (b.beams > 0 ? 3 : b.aimLive ? 2 : 0) : (b.atk === 'slam' && b.inBar === 0) || b.atk === 'volley' ? 4 : (G.beat & 1);
     // contacto / pisotón en la cabeza
     const bb = box(b);
+    if (b.stompCd > 0) b.stompCd--;
     if (!p.dead && U.overlap(bb, NV.playerBox(p))) {
       const feetPrev = p.y + p.h - p.vy;
-      if (p.vy > 0.4 && feetPrev <= bb.y + 22) { p.vy = C.STOMP_BOUNCE_HELD; NV.damageBoss(b, G, 3, true); G.sfx('stomp'); FX.text(G, '¡PISOTÓN!', p.x + 7, p.y - 6, '#f5c542'); }
-      else if (p.shield <= 0) NV.hurtPlayer(p, G, b.cx);
+      if (p.vy > 0.4 && feetPrev <= bb.y + 22 && b.stompCd === 0) {
+        // pisotón: 2 de daño y te despide hacia atrás (no se puede rebotar sin parar sobre la cabeza)
+        p.vy = C.STOMP_BOUNCE_HELD; p.x = Math.min(p.x, bb.x - p.w); p.vx = -3; b.stompCd = 50;
+        NV.damageBoss(b, G, 2, true); G.sfx('stomp'); FX.text(G, '¡PISOTÓN!', p.x + 7, p.y - 6, '#f5c542');
+      } else if (p.shield <= 0) { NV.hurtPlayer(p, G, b.cx); p.x = Math.min(p.x, bb.x - p.w - 2); }
+    }
+    // MANOTAZO: si te quedás pegado al jefe, levanta el brazo (aviso) y barre a los costados
+    if (b.swatCd > 0) b.swatCd--;
+    const near = Math.abs(p.x + 7 - b.cx) < 100 && p.y + p.h > b.by - 130 && !p.dead;
+    if (near && b.swatT === 0 && b.swatCd === 0 && b.atk !== 'rest') { b.swatT = 26; G.sfx('laser_charge'); }
+    if (b.swatT > 0) {
+      b.swatT--; b.frame = 4;
+      if (b.swatT === 6) {
+        G.sfx('slam'); G.shake(6);
+        const zone = { x: b.cx - 110, y: b.by - 100, w: 220, h: 100 };
+        for (let i = 0; i < 16; i++) FX.part(G, { x: b.cx - 60 + U.rand(-50, 0), y: b.by - U.rand(0, 90), vx: U.rand(-3, -1), vy: U.rand(-1.5, 1.5), color: '#f4f8ff', life: 20, max: 20 });
+        if (U.overlap(zone, NV.playerBox(p)) && p.shield <= 0 && NV.hurtPlayer(p, G, b.cx)) { p.vx = -4; p.vy = -4.5; }
+        b.swatCd = 110;
+      }
     }
   };
 
@@ -186,11 +218,22 @@
       if (inBar === 0) G.sfx('roar');
       const n = b.phase === 2 ? 2 : 1;
       for (let i = 0; i < n; i++) {
-        const tx = U.clamp(p.x + 7 + (i ? U.rand(-90, 90) : U.rand(-20, 20)), A.x0 + 20, A.x1 - 180);
+        const tx = U.clamp(p.x + 7 + (i ? U.rand(-90, 90) : U.rand(-20, 20)), A.x0 + 20, b.cx - 70);
         const fall = NV.Audio.beatLen() * 60; // llega justo en el próximo beat
-        G.bullets.push({ x: tx, y: -10, vx: 0, vy: (A.floorY + 10) / fall, r: 5, life: fall + 4, kind: 'ornament', dmg: 1, bomb: true, green: i === 1, rain: true, t: 0 });
-        G.marks.push({ x: tx, life: fall });
+        const land = landY(G.L, tx, A);
+        G.bullets.push({ x: tx, y: -10, vx: 0, vy: (land + 10) / fall, r: 5, life: fall + 4, kind: 'ornament', dmg: 1, bomb: true, green: i === 1, rain: true, landY: land, t: 0 });
+        G.marks.push({ x: tx, y: land, life: fall });
       }
+    }
+    if (b.atk === 'volley' && inBar >= 1) {
+      // RÁFAGA: bastones de caramelo apuntados a donde estás (también a las plataformas)
+      const n = b.phase === 2 ? 3 : 2, hx = b.cx + 50, hy = b.by - 96;
+      const ang0 = Math.atan2(p.y + 17 - hy, p.x + 7 - hx);
+      for (let i = 0; i < n; i++) {
+        const a = ang0 + (i - (n - 1) / 2) * 0.16, sp = 3.6;
+        G.bullets.push({ x: hx, y: hy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 3, life: 200, kind: 'elaser', dmg: 1, t: 0 });
+      }
+      G.sfx('shoot'); G.shake(2);
     }
     if (b.atk === 'slam') {
       if (inBar === 1 || (b.phase === 2 && inBar === 3)) {
@@ -205,6 +248,7 @@
     if (b.dead || !b.active) return;
     const mult = b.atk === 'rest' ? 2 : 1;
     b.hp -= dmg * mult; b.flash = 4; if (!stomp) G.sfx('boss_hit');
+    if (G.frame % 3 === 0 || stomp) FX.text(G, '-' + dmg * mult, b.cx + U.rand(-40, 20), b.by - U.rand(60, 110), mult > 1 ? '#f5c542' : '#ffffff', 1, 26);
     if (mult > 1 && G.frame % 6 === 0) FX.text(G, 'x2', b.cx + U.rand(-30, 30), b.by - 120, '#f5c542');
     if (b.hp <= 0) { b.hp = 0; b.dead = true; b.deathT = 0; G.sfx('roar'); G.onBossKilled(b); }
   };

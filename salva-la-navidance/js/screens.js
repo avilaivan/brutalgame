@@ -79,7 +79,64 @@
       const bar = U.clamp((t - 58) / 16, 0, 1) * (lw / 2);
       if (bar > 0) { ctx.globalAlpha = 1 - out; X.rect(W / 2 - bar, ly + lh + 6, bar * 2, 2, '#ff2e4a'); ctx.globalAlpha = 1; }
       if (t > 74) X.text('P R E S E N T A', W / 2, ly + lh + 18, { align: 'center', color: '#8ea2c4', shadow: false, alpha: U.clamp((t - 74) / 20, 0, 1) * (1 - out) });
-      if (t > 176 || (t > 30 && (IN.edges.size > 0 || G.tapThisFrame))) { G.tapThisFrame = null; G.go('title'); }
+      if (t > 176 || (t > 30 && (IN.edges.size > 0 || G.tapThisFrame))) { G.tapThisFrame = null; G.go('story'); }
+    },
+  };
+
+  // ---------------- HISTORIA (cinemática de ~6 s, se saltea con cualquier tecla) ----------------
+  const ease = (v) => 1 - Math.pow(1 - U.clamp(v, 0, 1), 3);
+  const bounce = (v) => { v = U.clamp(v, 0, 1); const n = 7.5625, d = 2.75; if (v < 1 / d) return n * v * v; if (v < 2 / d) return n * (v -= 1.5 / d) * v + 0.75; if (v < 2.5 / d) return n * (v -= 2.25 / d) * v + 0.9375; return n * (v -= 2.625 / d) * v + 0.984375; };
+  // texto que se escribe letra por letra (con "tic" de máquina)
+  function typed(str, x, y, t0, t, o) {
+    const n = Math.max(0, Math.min(str.length, Math.floor((t - t0) / 2)));
+    if (n > 0) NV.X.text(str.slice(0, n), x, y, o);
+    if (n > 0 && n < str.length && (t & 3) === 0) NV.Audio.sfx('move');
+  }
+  S.story = {
+    enter(G) { G.st = 0; if (!G.menuMusic) { G.menuMusic = true; NV.Audio.preview(U.pick(NV.HERO_ORDER)); } },
+    draw(ctx, G) {
+      const X = NV.X, W = X.W, t = ++G.st;
+      // 1) la fiesta: fondo con público eufórico
+      const dark = t < 150 ? 0.5 : Math.min(0.92, 0.5 + (t - 150) / 20);
+      if (t > 60 && t < 150) G.hype = 2;
+      bg(ctx, G, dark);
+      if (t < 150) {
+        typed('NOCHEBUENA EN 9 DE JULIO.', W / 2, 110, 6, t, { scale: 2, align: 'center', color: '#ffffff' });
+        typed('LA NAVIDANCE DE BRUTAL. ESTÁ A FULL...', W / 2, 140, 64, t, { align: 'center', color: '#f5c542', outline: true });
+      }
+      // 2) se corta la luz
+      if (t === 150) { NV.Audio.sfx('blackout'); NV.Audio.pause(); }
+      if (t >= 150 && t < 160 && (t & 2)) X.rect(0, 0, W, 360, '#ffffff');
+      // 3) sube la silueta de MECHA-NOEL con los ojos encendidos
+      if (t >= 170 && t < 330) {
+        const m = window.ART_DATA.sprites.noel, sc = 2, up = ease((t - 170) / 40);
+        const bx = W / 2 + (t > 205 && t < 225 ? (Math.random() - 0.5) * 6 : 0), by = 400 - up * 120;
+        ctx.save(); ctx.translate(Math.round(bx), Math.round(by)); ctx.scale(sc, sc);
+        ctx.filter = 'brightness(0)'; ctx.drawImage(X.img.noel, 2 * m.w, 0, m.w, m.h, -m.w / 2, -m.h, m.w, m.h); ctx.filter = 'none';
+        ctx.restore();
+        [m.lensL, m.lensR].forEach((l, i) => {
+          const ex = bx - (m.w * sc) / 2 + l[0] * sc, ey = by - m.h * sc + l[1] * sc;
+          const g = ctx.createRadialGradient(ex, ey, 0, ex, ey, 24); g.addColorStop(0, i ? 'rgba(51,224,122,1)' : 'rgba(255,46,74,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g; ctx.fillRect(ex - 24, ey - 24, 48, 48); ctx.restore();
+        });
+        if (t === 205) NV.Audio.sfx('roar');
+        typed('MECHA-NOEL QUIERE ROBARSE LA NAVIDANCE', W / 2, 40, 210, t, { scale: 2, align: 'center', color: '#ff2e4a' });
+      }
+      // 4) los 3 DJs entran desde abajo
+      if (t >= 270) {
+        typed('¡SOLO UN DJ PUEDE SALVARLA!', W / 2, 74, 272, t, { scale: 2, align: 'center', color: '#f5c542' });
+        NV.HERO_ORDER.forEach((k, i) => {
+          const h = NV.HEROES[k], y = 360 - ease((t - 280 - i * 8) / 22) * 160, x = W / 2 + (i - 1) * 120;
+          if (y >= 360) return;
+          X.panel(x - 50, y, 100, 116, { border: h.color, light: h.light });
+          ctx.drawImage(X.img[k + '_portrait'], x - 46, y + 4, 92, 92);
+          X.text(h.short, x, y + 100, { align: 'center', color: h.light });
+        });
+      }
+      // 5) destello blanco y al título
+      if (t > 330) { ctx.globalAlpha = Math.min(1, (t - 330) / 16); X.rect(0, 0, W, 360, '#ffffff'); ctx.globalAlpha = 1; }
+      X.text(NV.Input.isTouch ? 'TOCÁ PARA SALTEAR' : 'CUALQUIER TECLA PARA SALTEAR', W - 8, 346, { align: 'right', color: '#5d6a8a', alpha: 0.7 });
+      if (t > 350 || (t > 20 && (IN.edges.size > 0 || G.tapThisFrame))) { G.tapThisFrame = null; G.go('title'); }
     },
   };
 
@@ -88,12 +145,19 @@
     enter(G) {
       G.mi = 0; if (!G.menuMusic) { G.menuMusic = true; NV.Audio.preview(U.pick(NV.HERO_ORDER)); }
       G.partyTop = null; NV.DB.top(1).then((r) => { G.partyTop = r && r[0]; }); // récord a vencer
+      G.tt = 0; NV.Audio.resume();
     },
     draw(ctx, G) {
-      const X = NV.X, W = X.W;
+      const X = NV.X, W = X.W, t = ++G.tt;
       bg(ctx, G, 0.35);
       const logo = X.img.logo, lw = 270, lh = (lw * logo.height) / logo.width;
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(logo, Math.round(W / 2 - lw / 2), 6 + Math.round(Math.sin(G.frame * 0.04) * 2) + (G.phase < 0.1 ? -1 : 0), lw, lh); ctx.restore();
+      const drop = (1 - bounce(t / 45)) * -220; // el logo cae y rebota
+      if (t === 18) NV.Audio.sfx('slam');
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(logo, Math.round(W / 2 - lw / 2), Math.round(6 + drop + Math.sin(G.frame * 0.04) * 2) + (G.phase < 0.1 ? -1 : 0), lw, lh); ctx.restore();
+      // destellos que aparecen sobre el logo
+      if (t > 45 && G.frame % 40 < 8) { const sx = Math.round(W / 2 - lw / 2 + ((G.frame * 37) % lw)), sy = 30 + ((G.frame * 53) % 120), k = 4 - Math.abs((G.frame % 40) - 4); X.rect(sx - k, sy, k * 2 + 1, 1, '#ffffff'); X.rect(sx, sy - k, 1, k * 2 + 1, '#ffffff'); }
+      const ui = (1 - ease((t - 30) / 30)) * 160; // la interfaz sube desde abajo
+      ctx.save(); ctx.translate(0, Math.round(ui));
       ctx.drawImage(X.img.brutal_logo, 10, 10, 94, 16); // la marca, siempre a la vista
       X.text('9 DE JULIO · BS. AS.', 10, 30, { color: '#5d6a8a' });
       // el premio: lo que mueve a jugar otra vez
@@ -103,6 +167,7 @@
       if (top) X.text('A VENCER: ' + String(top.name).toUpperCase() + '  ' + U.fmtTime(top.timeMs / 1000), W / 2, 202, { scale: 2, align: 'center', color: '#ff2e4a', outline: true });
       else X.text('COMPETÍ POR EL MEJOR TIEMPO', W / 2, 202, { scale: 2, align: 'center', color: '#ff2e4a', outline: true });
       const prof = NV.DB.profile();
+      if (t < 60) { G.tapThisFrame = null; IN.edges.clear(); } // los botones todavía están entrando
       menu(G, [
         { label: '▶ JUGAR', x: W / 2, y: 244, w: 220, h: 34, scale: 3, color: '#b3132b', act: () => G.go(prof ? 'select' : 'register') },
         { label: 'RANKING', x: W / 2 - 116, y: 288, w: 108, h: 26, color: '#2559d6', act: () => G.go('ranking') },
@@ -111,6 +176,7 @@
       ]);
       if (prof) X.text('JUGANDO COMO ' + prof.name.toUpperCase() + '  @' + prof.ig, W / 2, 312, { align: 'center', color: '#cfd8e6' });
       X.text(NV.Input.isTouch ? 'TOCÁ PARA ELEGIR' : 'FLECHAS + ENTER  ·  M: SONIDO', W / 2, 344, { align: 'center', color: '#5d6a8a' });
+      ctx.restore();
     },
   };
 

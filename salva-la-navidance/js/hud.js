@@ -8,14 +8,26 @@
     if (G.lastHp !== undefined && p.hp < G.lastHp) G.hpLost = 24;
     G.lastHp = p.hp;
     const hs = G.hpLost > 0 ? Math.round(Math.sin(G.hpLost * 1.7) * (G.hpLost / 8)) : 0;
-    X.panel(6 + hs, 6, 118, 34, { border: G.hpLost > 0 && (G.hpLost >> 2) % 2 ? '#ff2e4a' : undefined });
+    X.panel(6 + hs, 6, 118, 54, { border: G.hpLost > 0 && (G.hpLost >> 2) % 2 ? '#ff2e4a' : undefined });
     ctx.drawImage(X.img[p.key + '_face'], 10 + hs, 10, 26, 26);
     X.rect(9 + hs, 9, 28, 1, hero.color); X.rect(9 + hs, 36, 28, 1, hero.color); X.rect(9 + hs, 9, 1, 28, hero.color); X.rect(36 + hs, 9, 1, 28, hero.color);
     for (let i = 0; i < NV.CFG.HP; i++) X.spr('heart', i < p.hp ? 0 : 1, 49 + hs + i * 15, 25, { flash: G.hpLost > 0 && i === p.hp && (G.hpLost >> 1) % 2 });
     if (G.hpLost > 0) G.hpLost--;
-    if (p.hp === 1 && !p.dead && !(p.shield > 0) && (G.frame >> 4) % 2) X.text('¡ÚLTIMA VIDA!', 42 + hs, 44, { color: '#ff2e4a', outline: true });
-    X.text(hero.short, 42, 28, { scale: 1, color: hero.light });
-    if (p.shield > 0) { const s = Math.ceil(p.shield / 60); X.text('ESCUDO ' + s, 42, 44, { color: '#f5c542', outline: true }); }
+    X.text(hero.short, 42 + hs, 28, { scale: 1, color: hero.light });
+    // barras: ENERGÍA del dash (cian, con marcas de cada dash) y CALOR del arma (amarillo -> rojo)
+    const C = NV.CFG, lx = 10 + hs, bx = lx + 30, bw = 76;
+    const bar = (y, v, col, label, lcol, blink) => {
+      X.text(label, lx, y - 1, { color: lcol, shadow: false });
+      X.rect(bx, y, bw, 5, '#0b0a12'); X.rect(bx + 1, y + 1, bw - 2, 3, '#1a1e30');
+      if (!blink || (G.frame >> 2) % 2) { X.rect(bx + 1, y + 1, Math.round((bw - 2) * v / 100), 3, col); X.rect(bx + 1, y + 1, Math.round((bw - 2) * v / 100), 1, '#ffffff'); }
+    };
+    const en = p.energy !== undefined ? p.energy : 100, ready = en >= C.DASH_COST;
+    bar(41, en, ready ? '#4de2ff' : '#1a8fb3', 'DASH', ready ? '#4de2ff' : '#5d6a8a', false);
+    for (let k = C.DASH_COST; k < 100; k += C.DASH_COST) X.rect(bx + 1 + Math.round((bw - 2) * k / 100), 42, 1, 3, '#0b0a12');
+    const ht = p.heat || 0, hc = p.overheat ? '#ff2e4a' : ht > 70 ? '#ff8a3d' : '#f5c542';
+    bar(50, ht, hc, 'ARMA', p.overheat ? '#ff2e4a' : '#f5c542', p.overheat || ht > 80);
+    if (p.hp === 1 && !p.dead && !(p.shield > 0) && (G.frame >> 4) % 2) X.text('¡ÚLTIMA VIDA!', 10 + hs, 64, { color: '#ff2e4a', outline: true });
+    if (p.shield > 0) { const s = Math.ceil(p.shield / 60); X.text('ESCUDO ' + s, 10, 64, { color: '#f5c542', outline: true }); }
 
     // ---------- cronómetro ----------
     const beatPulse = G.phase < 0.12 ? 1 : 0;
@@ -60,6 +72,8 @@
       X.text('MECHA-NOEL', bx, by - 1, { color: '#ff2e4a', outline: true });
       X.panel(bx, by + 9, bw, 10, { light: false });
       const fw = Math.round((bw - 4) * b.hp / b.maxHp);
+      G.bossShow = Math.max(b.hp, (G.bossShow === undefined ? b.hp : G.bossShow) - 0.35); // estela blanca del daño reciente
+      X.rect(bx + 2, by + 11, Math.round((bw - 4) * G.bossShow / b.maxHp), 6, '#ffffff');
       X.rect(bx + 2, by + 11, fw, 6, b.phase === 2 ? '#ff2e4a' : '#33e07a'); X.rect(bx + 2, by + 11, fw, 1, '#ffffff');
     }
 

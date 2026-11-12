@@ -60,6 +60,12 @@ Los datos se guardan en `data/scores.json`. Para empezar el ranking de cero, bor
 | Pausa | II | Esc / P | Start |
 | Reiniciar al instante | (desde la pausa) | R | Select |
 
+### Arma, dash y fiesta
+- **El arma se recalienta:** cada disparo suma calor (barra ARMA). Si llega al máximo se traba hasta enfriarse: conviene disparar en ráfagas cortas.
+- **El dash gasta energía** (barra DASH, celeste): alcanza para 2 seguidos y se recarga en ~1,3 s por dash.
+- En **FIEBRE** el arma se enfría y el dash se recarga más rápido.
+- **La fiesta sube a medida que avanzás:** láseres de escenario, luces más intensas, estroboscópico y público eufórico. En cada zona nueva hay un **DROP** (estallido de luces y cañones de papel picado).
+
 ### Opciones
 Desde el título o la pausa: volumen de música y efectos, vibración (Android) y **destellos y temblor** (apagarlo quita los flashes de pantalla y las sacudidas de cámara, para gente sensible a las luces). Quedan guardadas en cada celular.
 
@@ -69,7 +75,7 @@ Desde el título o la pausa: volumen de música y efectos, vibración (Android) 
 
 ### Ghost, medallas y rango
 - **Ghost:** tu mejor partida corre al lado tuyo como silueta blanca, y en la barra de progreso hay una marca blanca con su posición.
-- **Medallas:** al terminar recibís un rango según tu tiempo: **S** < 60 s, **A** < 75 s, **B** < 95 s, **C** el resto. Se ajustan en `js/core.js` (`MEDALS`) cuando haya tiempos reales de la fiesta.
+- **Medallas:** al terminar recibís un rango según tu tiempo: **S** < 62 s, **A** < 75 s, **B** < 95 s, **C** el resto. Se ajustan en `js/core.js` (`MEDALS`) cuando haya tiempos reales de la fiesta.
 
 - **Pisotón:** caer encima de un enemigo común lo elimina y te hace rebotar (encadená pisotones para más puntos).
 - **Escudo dorado:** 8 segundos inmune. Si tocás enemigos con el escudo, los rompés. Después se rompe solo.
@@ -87,9 +93,11 @@ Ataca **al ritmo de la canción**, un ataque por compás:
 - **Láser de sus lentes:** apunta (línea punteada roja y verde) y en el siguiente beat dispara. Hay que moverse o hacer dash.
 - **Lluvia de bolas de Navidad:** una marca roja en el piso avisa dónde va a caer.
 - **Pisotón:** manda una onda de nieve y hielo por el piso; hay que saltarla.
+- **Ráfaga de bastones:** tira bastones de caramelo apuntados a donde estés (las plataformas no son refugio).
+- **Manotazo:** si te quedás pegado a él, levanta el brazo y barre a los costados.
+- Saltarle en la cabeza le hace 2 de daño y te despide hacia atrás.
 - **Descanso:** la hebilla de su cinturón brilla y recibe **doble daño**.
 - **SE CORTÓ LA NAVIDAD:** a la mitad de la vida se apagan las luces (solo queda un círculo de luz alrededor tuyo) y ataca más seguido.
-- También se le puede saltar en la cabeza (3 de daño).
 - A la mitad de la vida entra en **furia** y ataca más seguido.
 
 ---

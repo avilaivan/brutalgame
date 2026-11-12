@@ -11,7 +11,7 @@
     return {
       key, hero: NV.HEROES[key], x: x - 7, y: y - 34, w: 14, h: 34, vx: 0, vy: 0, dir: 1,
       hp: C.HP, onGround: false, coyote: 0, jumpBuf: 0, dash: 0, dashDir: 1, airDashUsed: false, dashJump: false,
-      shootCd: 0, shootPose: 0, invuln: 60, hurt: 0, shield: 0, dead: false, deadT: 0,
+      shootCd: 0, shootPose: 0, heat: 0, overheat: false, energy: 100, noEnergyT: 0, invuln: 60, hurt: 0, shield: 0, dead: false, deadT: 0,
       anim: 'idle', frame: 0, animT: 0, ghosts: [], safe: { x, y }, chain: 0,
     };
   };
@@ -29,7 +29,14 @@
     if (ix && !p.dash) p.dir = ix;
 
     // ---------- dash ----------
-    if (!locked && p.hurt === 0 && IN.pressed('dash') && p.dash === 0 && (p.onGround || !p.airDashUsed)) {
+    const fev = G.fever();
+    if (p.dash === 0) p.energy = Math.min(100, p.energy + C.DASH_REGEN * (fev ? 1.8 : 1));
+    if (p.noEnergyT > 0) p.noEnergyT--;
+    if (!locked && p.hurt === 0 && IN.pressed('dash') && p.dash === 0 && (p.onGround || !p.airDashUsed) && p.energy < C.DASH_COST) {
+      if (!p.noEnergyT) { G.sfx('denied'); FX.text(G, 'SIN ENERGÍA', p.x + 7, p.y - 12, '#4de2ff', 1, 30); p.noEnergyT = 30; }
+    }
+    if (!locked && p.hurt === 0 && IN.pressed('dash') && p.dash === 0 && (p.onGround || !p.airDashUsed) && p.energy >= C.DASH_COST) {
+      p.energy -= C.DASH_COST;
       p.dash = C.DASH_FRAMES; p.dashDir = ix || p.dir; p.dir = p.dashDir;
       if (!p.onGround) { p.airDashUsed = true; p.vy = 0; }
       G.sfx('dash');
@@ -67,12 +74,25 @@
     // ---------- disparo (mantener = ráfaga) ----------
     if (p.shootCd > 0) p.shootCd--;
     if (p.shootPose > 0) p.shootPose--;
-    if (!locked && IN.held.shoot && p.shootCd === 0 && p.hurt === 0) {
+    // calor del arma: baja solo; si llega a 100 se traba hasta enfriarse (más rápido en FIEBRE)
+    p.heat = Math.max(0, p.heat - (p.overheat ? C.HEAT_COOL_LOCK : C.HEAT_COOL) * (fev ? 1.6 : 1));
+    if (p.overheat) {
+      if (G.frame % 4 === 0) FX.part(G, { x: p.x + 7 + p.dir * 12, y: p.y + p.h - 26, vx: U.rand(-0.3, 0.3), vy: -U.rand(0.6, 1.2), color: G.frame % 8 ? '#c8d8f0' : '#8ea2c4', life: 24, max: 24, size: 2 });
+      if (p.heat <= C.HEAT_RESUME) { p.overheat = false; G.sfx('cooled'); }
+    }
+    if (!locked && IN.held.shoot && p.shootCd === 0 && p.hurt === 0 && p.overheat && IN.pressed('shoot')) G.sfx('denied');
+    if (!locked && IN.held.shoot && p.shootCd === 0 && p.hurt === 0 && !p.overheat) {
       const mine = G.bullets.filter((b) => b.mine).length;
       if (mine < C.SHOT_MAX) {
         // sale pegado al cañón (si sale 18 px adelante, a quemarropa pasa de largo) y a media altura del cuerpo
         G.bullets.push({ mine: true, x: p.x + 7 + p.dir * 6, y: p.y + p.h - 24, vx: p.dir * C.SHOT_SPEED, vy: 0, r: 6, life: C.SHOT_LIFE, dmg: C.SHOT_DMG, kind: 'shot_' + p.key, t: 0 });
         p.shootCd = C.SHOT_COOLDOWN; p.shootPose = 14; G.sfx('shoot');
+        p.heat += C.HEAT_SHOT;
+        if (p.heat >= 100) {
+          p.heat = 100; p.overheat = true; G.sfx('overheat'); G.shake(2);
+          FX.text(G, '¡SOBRECALENTADA!', p.x + 7, p.y - 14, '#ff8a3d', 1, 45);
+          for (let i = 0; i < 10; i++) FX.part(G, { x: p.x + 7 + p.dir * 12, y: p.y + p.h - 24, vx: U.rand(-1.5, 1.5), vy: -U.rand(0.5, 2), color: '#ffffff', life: 20, max: 20, size: 2 });
+        }
         G.muzzle = { x: p.x + 7 + p.dir * 16, y: p.y + p.h - 24, t: 5, c: p.hero.light };
       }
     }

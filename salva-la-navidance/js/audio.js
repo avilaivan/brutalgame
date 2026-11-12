@@ -148,6 +148,9 @@
       case 'blackout': osc('sawtooth', 60, t, 1.2, 0.18, { to: 20, lp: 600 }); noise(t, 0.3, 0.2, 'highpass', 3000); break;
       // cascabeles de trineo + campanitas
       case 'jingle': for (let i = 0; i < 6; i++) noise(t + i * 0.07, 0.06, 0.07, 'bandpass', 7200, 9000); [88, 91, 96].forEach((m, i) => osc('triangle', mtof(m), t + 0.05 + i * 0.09, 0.25, 0.05)); break;
+      case 'denied': osc('square', 160, t, 0.07, 0.06); osc('square', 120, t + 0.06, 0.08, 0.06); break;
+      case 'overheat': noise(t, 0.6, 0.16, 'highpass', 2500, 6000); osc('sawtooth', 600, t, 0.35, 0.06, { to: 120 }); break;
+      case 'cooled': osc('square', 880, t, 0.05, 0.05); osc('square', 1320, t + 0.05, 0.06, 0.05); break;
       case 'medal': osc('square', 140, t, 0.12, 0.2, { to: 60 }); noise(t, 0.18, 0.15, 'lowpass', 2500, 300); [79, 84, 88, 91].forEach((m, i) => osc('square', mtof(m), t + 0.12 + i * 0.06, 0.12, 0.06)); break;
       case 'timeout': [72, 67, 64, 60].forEach((m, i) => osc('square', mtof(m), t + i * 0.18, 0.22, 0.08)); break;
     }

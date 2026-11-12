@@ -83,10 +83,11 @@
     for (let x = off - 64; x < W + 64; x += 128, i++) {
       const id = Math.floor((camX * 0.9 + x) / 128);
       const lx = x + 10, ly = 66;
-      const ang = Math.PI / 2 + Math.sin((bp * Math.PI) / 2 + id * 1.7) * 0.55;
-      const half = 18 + bass * 26;
+      const I = G.intensity || 0;
+      const ang = Math.PI / 2 + Math.sin((bp * Math.PI) / (2 - I) + id * 1.7) * (0.55 + I * 0.3);
+      const half = 18 + bass * 26 + I * 14;
       const col = ci(id + (beat >> 2));
-      ctx.globalAlpha = Math.min(0.6, 0.12 + bass * 0.3 + G.onset * 0.15);
+      ctx.globalAlpha = Math.min(0.75, 0.12 + bass * 0.3 + G.onset * 0.15 + I * 0.15);
       ctx.save(); ctx.translate(lx, ly); ctx.rotate(ang); ctx.scale(1, half / 44); ctx.drawImage(cone(col), 0, -44); ctx.restore();
       // mancha de luz en el piso
       const fy = NV.GR * 16 - G.camY; const t = (fy - ly) / Math.max(0.1, Math.sin(ang)); const fx = lx + Math.cos(ang) * t;
@@ -94,6 +95,44 @@
     }
     ctx.restore();
   };
+  // LÁSERES DE ESCENARIO: abanicos que barren al ritmo; aparecen y se multiplican a medida que avanza la fiesta
+  S.drawLasers = function (ctx, G) {
+    const I = G.intensity || 0, drop = G.drop > 0;
+    if (I < 0.2 && !drop) return;
+    const W = NV.X.W, bp = G.beatPos, n = drop ? 10 : Math.round(2 + I * 8), pw = Math.min(1, (I - 0.2) * 2 + G.bass * 0.6 + (drop ? 1 : 0));
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineWidth = 1;
+    for (let k = 0; k < 2; k++) { // dos emisores en el truss
+      const ox = k ? W * 0.78 : W * 0.22, oy = 70;
+      for (let i = 0; i < n; i++) {
+        const a = Math.PI / 2 + (i - (n - 1) / 2) * (0.16 + I * 0.06) + Math.sin(bp * Math.PI / 2 + k * 2) * (0.5 + I * 0.4);
+        ctx.globalAlpha = 0.28 * pw; ctx.strokeStyle = ci(i + (G.beat >> 1) + k * 3);
+        ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox + Math.cos(a) * 520, oy + Math.sin(a) * 520); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  };
+  // niebla de colores al nivel del público, late con los graves
+  S.drawHaze = function (ctx, G) {
+    const I = G.intensity || 0; if (I < 0.1) return;
+    const W = NV.X.W; ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = (0.06 + G.bass * 0.12) * I; ctx.drawImage(hazeImg(ci(G.beat >> 2)), 0, 230, W, 130); ctx.restore();
+  };
+  const hazes = {};
+  function hazeImg(col) {
+    if (hazes[col]) return hazes[col];
+    const c = document.createElement('canvas'); c.width = 64; c.height = 64; const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, 64); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, col);
+    g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return (hazes[col] = c);
+  }
+  // ESTROBOSCÓPICO: flashes blancos en los golpes fuertes cuando la fiesta está a full (se apaga con "destellos")
+  S.drawStrobe = function (ctx, G) {
+    if (!NV.OPT.fx) return;
+    const I = G.intensity || 0, drop = G.drop > 0;
+    const on = (drop && G.frame % 6 < 2) || (I > 0.6 && G.onset > 0.6 && G.phase < 0.08 && (G.beat & 1) === 0);
+    if (!on) return;
+    ctx.save(); ctx.globalAlpha = drop ? 0.18 : 0.1; ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, NV.X.W, 360); ctx.restore();
+  };
+
   S.drawTruss = function (ctx, G, camX) {
     const X = NV.X, W = X.W;
     const toff = -((camX * 0.9) % 32);
@@ -216,7 +255,7 @@
       for (let i = i0; i < i0 + W / row.sp + 4; i++) {
         const h = hash(i, row.seed), s = row.s;
         const x = Math.round(i * row.sp - camX * row.f + (h % 7));
-        const hype = G.hype > 0, jumper = hype || hash(i + row.seed, beat) % 3 === 0;
+        const hype = G.hype > 0 || G.drop > 0, jumper = hype || hash(i + row.seed, beat) % (G.intensity > 0.66 ? 2 : 3) === 0;
         const hr = Math.round((6 + (h % 2)) * s), sh = Math.round((10 + (h % 3)) * s); // radio de cabeza, medio ancho de hombros
         const y = base + row.dy - Math.round((30 + (h % 12)) * s) - (jumper ? Math.round(hop * (hype ? 12 : 6) * s) : 0);
         // brazos arriba con los graves (o siempre, para algunos): 2 rectángulos, se mueven con el beat
