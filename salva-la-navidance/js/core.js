@@ -35,6 +35,9 @@ NV.CFG = {
   SHOT_MAX: 4,
   SHIELD_TIME: 8 * 60,    // el escudo te hace inmune 8 s y después se rompe
 
+  // ---------- Medallas por tiempo (segundos): ajustarlas cuando haya tiempos reales ----------
+  MEDALS: [['S', 60, '#f5c542'], ['A', 75, '#4de2ff'], ['B', 95, '#33e07a'], ['C', Infinity, '#8ea2c4']],
+
   // ---------- Puntaje (las B-Coins solo suman puntos y desempatan) ----------
   COIN_PTS: 100,
   STOMP_PTS: 300,

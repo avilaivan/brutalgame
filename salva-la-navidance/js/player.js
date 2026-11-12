@@ -49,13 +49,15 @@
     if (p.jumpBuf > 0 && p.coyote > 0 && p.hurt === 0) {
       p.vy = C.JUMP_VEL; p.jumpBuf = 0; p.coyote = 0; p.onGround = false;
       p.dashJump = p.dash > 0 || IN.held.dash; p.dash = 0;
-      G.sfx('jump');
+      G.sfx('jump'); p.sq = 1.16; // se estira al despegar
+      for (let i = 0; i < 3; i++) FX.part(G, { x: p.x + 7 + U.rand(-4, 4), y: p.y + p.h, vx: U.rand(-0.6, 0.6), vy: -U.rand(0.1, 0.4), color: '#e9f4ff', life: 10, max: 10 });
     }
     if (!IN.held.jump && p.vy < C.JUMP_CUT) p.vy = C.JUMP_CUT;
     if (!(p.dash > 0 && !p.onGround)) p.vy = Math.min(p.vy + C.GRAVITY, C.MAX_FALL);
 
     NV.Phys.move(p, L);
-    if (p.landed) { p.chain = 0; for (let i = 0; i < 4; i++) FX.part(G, { x: p.x + 7 + U.rand(-6, 6), y: p.y + p.h, vx: U.rand(-0.8, 0.8), vy: -U.rand(0.2, 0.8), color: '#e9f4ff', life: 12, max: 12 }); }
+    p.sq = (p.sq || 1) + (1 - (p.sq || 1)) * 0.22; // vuelve suave a su forma
+    if (p.landed) { p.chain = 0; p.sq = 0.84; for (let i = 0; i < 4; i++) FX.part(G, { x: p.x + 7 + U.rand(-6, 6), y: p.y + p.h, vx: U.rand(-0.8, 0.8), vy: -U.rand(0.2, 0.8), color: '#e9f4ff', life: 12, max: 12 }); }
     // último lugar seguro (para volver si se cae a un pozo)
     if (p.onGround && NV.Phys.solidAt(L, p.x + 2, p.y + p.h + 2) && NV.Phys.solidAt(L, p.x + p.w - 2, p.y + p.h + 2)) p.safe = { x: p.x + 7, y: p.y + p.h };
     if (p.y > L.h * 16 + 8) { G.pitFall(); return; }
@@ -126,7 +128,7 @@
     if (p.dead) { drawDeath(ctx, p, G, fx, fy); return; }
     if (p.invuln > 0 && p.hurt === 0 && (G.frame >> 2) % 2 === 0) return;
     const flash = p.hurt > 0 && (G.frame >> 1) % 2 === 0;
-    X.hero(p.key, p.anim, p.frame, fx, fy, p.dir < 0, flash);
+    X.hero(p.key, p.anim, p.frame, fx, fy, p.dir < 0, flash, undefined, p.sq);
     if (p.shield > 0) { // escudo dorado
       const blink = p.shield < 120 && (G.frame >> 2) % 2;
       if (!blink) {

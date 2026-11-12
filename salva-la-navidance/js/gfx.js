@@ -45,7 +45,7 @@
     sky: 'assets/bg/sky.png', far: 'assets/bg/far.png', mid: 'assets/bg/mid.png', near: 'assets/bg/near.png', tiles: 'assets/bg/tiles.png',
     deco_console: 'assets/bg/deco_console.png', deco_speaker: 'assets/bg/deco_speaker.png', deco_tree: 'assets/bg/deco_tree.png',
     deco_snow: 'assets/bg/deco_snow.png', deco_truss: 'assets/bg/deco_truss.png', deco_lamp: 'assets/bg/deco_lamp.png', deco_door: 'assets/bg/deco_door.png',
-    logo: 'assets/img/logo.png', coinBig: 'assets/img/coin.png',
+    logo: 'assets/img/logo.png', brutal_logo: 'assets/img/brutal_logo.png', coinBig: 'assets/img/coin.png',
     ivan_face: 'assets/img/ivan_face.jpg', hades_face: 'assets/img/hades_face.jpg', matias_face: 'assets/img/matias_face.jpg',
     ivan_portrait: 'assets/img/ivan_portrait.jpg', hades_portrait: 'assets/img/hades_portrait.jpg', matias_portrait: 'assets/img/matias_portrait.jpg',
     grinch_card: 'assets/img/grinch_card.jpg',
@@ -80,12 +80,14 @@
     ctx.restore();
   };
   // Héroes (hojas recortadas de las animaciones originales)
-  X.hero = function (hero, anim, frame, x, y, flip, flash, alpha) {
+  // sq: squash & stretch vertical (1 = normal); el ancho compensa para conservar el volumen
+  X.hero = function (hero, anim, frame, x, y, flip, flash, alpha, sq = 1) {
     const D = window.SPRITE_DATA; const a = D.anims[hero][anim] || D.anims[hero].idle;
     const f = ((frame % a.n) + a.n) % a.n;
     ctx.save();
     if (alpha !== undefined) ctx.globalAlpha = alpha;
     ctx.translate(Math.round(x), Math.round(y));
+    if (Math.abs(sq - 1) > 0.02) ctx.scale(1 / Math.sqrt(sq), sq);
     if (flip) ctx.scale(-1, 1);
     ctx.drawImage(flash ? X.white[hero] : X.img[hero], f * D.cw, a.row * D.ch, D.cw, D.ch, -D.ax, -D.ay, D.cw, D.ch);
     ctx.restore();

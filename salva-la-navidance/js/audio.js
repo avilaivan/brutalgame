@@ -131,6 +131,11 @@
       case 'die_hades': for (let i = 0; i < 6; i++) osc('square', 1500 - i * 200, t + i * 0.05, 0.05, 0.07); noise(t, 0.5, 0.15, 'highpass', 5000); break;
       case 'die_matias': osc('sine', 1200, t, 0.7, 0.14, { to: 60 }); osc('triangle', 600, t, 0.7, 0.08, { to: 30 }); break;
       case 'win': [72, 76, 79, 84, 79, 84, 88].forEach((m, i) => osc('square', mtof(m), t + i * 0.11, 0.16, 0.08)); break;
+      // splash del estudio: golpe de bajo + arpegio que sube + brillo
+      case 'logo': osc('sine', 110, t, 0.9, 0.35, { to: 38 }); noise(t, 0.25, 0.12, 'lowpass', 1800, 120);
+        [48, 55, 60, 64, 67, 72].forEach((m, i) => osc('square', mtof(m + 12), t + 0.55 + i * 0.07, 0.18, 0.05));
+        osc('triangle', mtof(96), t + 1.05, 0.9, 0.05); break;
+      case 'medal': osc('square', 140, t, 0.12, 0.2, { to: 60 }); noise(t, 0.18, 0.15, 'lowpass', 2500, 300); [79, 84, 88, 91].forEach((m, i) => osc('square', mtof(m), t + 0.12 + i * 0.06, 0.12, 0.06)); break;
       case 'timeout': [72, 67, 64, 60].forEach((m, i) => osc('square', mtof(m), t + i * 0.18, 0.22, 0.08)); break;
     }
   };

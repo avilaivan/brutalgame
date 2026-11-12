@@ -13,12 +13,12 @@
 
     // ---------- cronómetro ----------
     const beatPulse = G.phase < 0.12 ? 1 : 0;
-    X.panel(W / 2 - 86, 4, 172, 42, { border: beatPulse ? hero.color : '#3a4466' });
+    X.panel(W / 2 - 86, 4, 172, 50, { border: beatPulse ? hero.color : '#3a4466' });
     const t = G.runTime;
     const warn = NV.CFG.TIME_LIMIT - t < 20;
     X.text(NV.U.fmtTime(t), W / 2, 10, { scale: 3, align: 'center', color: warn && (G.frame >> 3) % 2 ? '#ff2e4a' : '#ffffff' });
     const pb = NV.DB.best();
-    X.text(pb ? 'TU MEJOR ' + NV.U.fmtTime(pb) : 'TERMINÁ EL NIVEL LO MÁS RÁPIDO POSIBLE', W / 2, 35, { align: 'center', color: '#8ea2c4' });
+    X.text(warn ? '¡SE ACABA EL TIEMPO!' : pb ? 'RÉCORD ' + NV.U.fmtTime(pb) : 'SIN RÉCORD TODAVÍA', W / 2, 34, { align: 'center', color: warn ? '#ff2e4a' : '#8ea2c4' });
 
     // ---------- B-Coins y puntos ----------
     X.panel(W - 124, 6, 118, 34);
@@ -28,14 +28,16 @@
 
     // ---------- progreso del nivel ----------
     if (!G.bossOn) {
-      const bw = 172, bx = W / 2 - bw / 2, by = 50;
+      // barra de progreso dentro del panel del reloj: tu posición, la del ghost y los checkpoints
+      const bw = 148, bx = W / 2 - bw / 2 - 6, by = 46, ax = G.L.arena.x0;
       X.rect(bx, by, bw, 3, '#1a1e30');
-      const prog = NV.U.clamp((p.x) / G.L.arena.x0, 0, 1);
-      X.rect(bx, by, Math.round(bw * prog), 3, hero.color);
-      for (const c of G.L.checkpoints) X.rect(bx + Math.round((bw * c.x) / G.L.arena.x0) - 1, by - 1, 2, 5, '#8ea2c4');
-      X.text('★', bx + bw + 4, by - 3, { color: '#f5c542', shadow: false });
+      X.rect(bx, by, Math.round(bw * NV.U.clamp(p.x / ax, 0, 1)), 3, hero.color);
+      for (const c of G.L.checkpoints) X.rect(bx + Math.round((bw * c.x) / ax) - 1, by - 1, 2, 5, '#8ea2c4');
+      const gs = G.ghost && G.running && G.ghost.f[Math.floor(G.runTime * 30)];
+      if (gs) X.rect(bx + Math.round(bw * NV.U.clamp(gs[0] / ax, 0, 1)) - 1, by - 2, 2, 7, '#ffffff');
+      X.text('★', bx + bw + 4, by - 4, { color: '#f5c542', shadow: false });
     } else if (G.boss) {
-      const b = G.boss, bw = 200, bx = W / 2 - bw / 2, by = 52;
+      const b = G.boss, bw = 200, bx = W / 2 - bw / 2, by = 60;
       X.text('CYBER-GRINCH', bx, by - 1, { color: '#7cff4d', outline: true });
       X.panel(bx, by + 9, bw, 10, { light: false });
       const fw = Math.round((bw - 4) * b.hp / b.maxHp);
