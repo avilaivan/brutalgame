@@ -37,8 +37,8 @@
   // ---------------- carga de imágenes ----------------
   const LIST = {
     ivan: 'assets/sprites/ivan.png', hades: 'assets/sprites/hades.png', matias: 'assets/sprites/matias.png',
-    patovica: 'assets/sprites/patovica.png', bafle: 'assets/sprites/bafle.png', dron: 'assets/sprites/dron.png', chispa: 'assets/sprites/chispa.png',
-    apagon: 'assets/sprites/apagon.png', coin: 'assets/sprites/coin.png', mega: 'assets/sprites/mega.png', shield: 'assets/sprites/shield.png',
+    patovica: 'assets/sprites/patovica.png', regalo: 'assets/sprites/regalo.png', esfera: 'assets/sprites/esfera.png', duende: 'assets/sprites/duende.png',
+    noel: 'assets/sprites/noel.png', coin: 'assets/sprites/coin.png', mega: 'assets/sprites/mega.png', shield: 'assets/sprites/shield.png',
     heart: 'assets/sprites/heart.png', beacon: 'assets/sprites/beacon.png', elaser: 'assets/sprites/elaser.png', ornament: 'assets/sprites/ornament.png',
     wave: 'assets/sprites/wave.png', boom: 'assets/sprites/boom.png', movinghead: 'assets/sprites/movinghead.png',
     shot_ivan: 'assets/sprites/shot_ivan.png', shot_hades: 'assets/sprites/shot_hades.png', shot_matias: 'assets/sprites/shot_matias.png',
@@ -48,9 +48,9 @@
     logo: 'assets/img/logo.png', brutal_logo: 'assets/img/brutal_logo.png', coinBig: 'assets/img/coin.png',
     ivan_face: 'assets/img/ivan_face.jpg', hades_face: 'assets/img/hades_face.jpg', matias_face: 'assets/img/matias_face.jpg',
     ivan_portrait: 'assets/img/ivan_portrait.jpg', hades_portrait: 'assets/img/hades_portrait.jpg', matias_portrait: 'assets/img/matias_portrait.jpg',
-    apagon_card: 'assets/img/apagon_card.png',
+    noel_card: 'assets/img/noel_card.png',
   };
-  const WHITE = ['ivan', 'hades', 'matias', 'patovica', 'bafle', 'dron', 'chispa', 'apagon', 'heart', 'coin'];
+  const WHITE = ['ivan', 'hades', 'matias', 'patovica', 'regalo', 'esfera', 'duende', 'noel', 'heart', 'coin'];
   X.load = function (done) {
     const keys = Object.keys(LIST); X.total = keys.length;
     keys.forEach((k) => {
@@ -104,35 +104,52 @@
     atlasW += w + 1;
   });
   const atlases = {};
-  function atlas(color) {
-    if (atlases[color]) return atlases[color];
+  const mix = (hex, to, t) => { const a = NV.U.hex2rgb(hex.length === 7 ? hex : '#ffffff'), b = NV.U.hex2rgb(to); return 'rgb(' + a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(',') + ')'; };
+  // atlas de un color; grad = degradé arcade (arriba claro, abajo oscuro) para los textos grandes
+  function atlas(color, grad) {
+    const key = color + (grad ? '|g' : '');
+    if (atlases[key]) return atlases[key];
     const c = document.createElement('canvas'); c.width = atlasW; c.height = GH;
-    const x = c.getContext('2d'); x.fillStyle = color;
-    for (const ch in GLYPH) { const g = GLYPH[ch]; for (const [px, py] of g.px) x.fillRect(g.x + px, py + TOP, 1, 1); }
-    atlases[color] = c; return c;
+    const x = c.getContext('2d');
+    const rowCol = (r) => !grad ? color : r <= 1 ? mix(color, '#ffffff', 0.55) : r <= 3 ? mix(color, '#ffffff', 0.2) : r >= 6 ? mix(color, '#000000', 0.32) : color;
+    for (const ch in GLYPH) { const g = GLYPH[ch]; for (const [px, py] of g.px) { x.fillStyle = rowCol(py); x.fillRect(g.x + px, py + TOP, 1, 1); } }
+    atlases[key] = c; return c;
   }
   const isDigit = (ch) => ch >= '0' && ch <= '9';
-  function adv(ch) { if (ch === ' ') return 4; const g = GLYPH[ch]; if (!g) return 6; return isDigit(ch) ? 6 : g.w + 1; }
-  X.measure = (str, sc = 1) => { let w = 0; for (const ch of String(str)) w += adv(ch); return Math.max(0, w - 1) * sc; };
+  function adv(ch, bold) { if (ch === ' ') return 4; const g = GLYPH[ch]; if (!g) return 6; return (isDigit(ch) ? 6 : g.w + 1) + (bold ? 1 : 0); }
+  // fancy (por defecto en textos de escala 2 o más): trazo grueso + degradé + contorno + sombra dura
+  X.measure = (str, sc = 1, fancy = sc >= 2) => { let w = 0; for (const ch of String(str)) w += adv(ch, fancy); return Math.max(0, w - 1) * sc; };
   X.text = function (str, x, y, o = {}) {
     str = String(str);
     const sc = o.scale || 1, col = o.color || '#ffffff';
-    const w = X.measure(str, sc);
+    const fancy = o.fancy !== undefined ? o.fancy : sc >= 2;
+    const w = X.measure(str, sc, fancy);
     let sx = o.align === 'center' ? x - Math.floor(w / 2) : o.align === 'right' ? x - w : x;
     sx = Math.round(sx); y = Math.round(y);
     const ctx = o.ctx || X.ctx; // o.ctx: dibujar en otro canvas (placa para compartir)
     if (o.alpha !== undefined) ctx.globalAlpha = o.alpha;
-    const pass = (color, dx, dy) => {
-      const a = atlas(color); let cx = sx + dx;
+    const pass = (color, dx, dy, grad) => {
+      const a = atlas(color, grad); let cx = sx + dx;
       for (const ch of str) {
         const g = GLYPH[ch];
-        if (g) { const off = isDigit(ch) ? Math.floor((5 - g.w) / 2) : 0; ctx.drawImage(a, g.x, 0, g.w, GH, cx + off * sc, y + dy - TOP * sc, g.w * sc, GH * sc); }
-        cx += adv(ch) * sc;
+        if (g) {
+          const off = isDigit(ch) ? Math.floor((5 - g.w) / 2) : 0, gx = cx + off * sc;
+          ctx.drawImage(a, g.x, 0, g.w, GH, gx, y + dy - TOP * sc, g.w * sc, GH * sc);
+          if (fancy) ctx.drawImage(a, g.x, 0, g.w, GH, gx + sc, y + dy - TOP * sc, g.w * sc, GH * sc);
+        }
+        cx += adv(ch, fancy) * sc;
       }
     };
-    if (o.outline) { const oc = o.outline === true ? '#0b0a12' : o.outline; for (const [dx, dy] of [[-sc, 0], [sc, 0], [0, -sc], [0, sc], [-sc, -sc], [sc, sc], [-sc, sc], [sc, -sc]]) pass(oc, dx, dy); }
-    else if (o.shadow !== false) pass(o.shadowColor || '#0b0a12', sc, sc);
-    pass(col, 0, 0);
+    const oc = o.outline && o.outline !== true ? o.outline : '#0b0a12';
+    if (fancy) {
+      pass('#05040a', 0, sc * 2);  // sombra dura
+      for (const [dx, dy] of [[-sc, 0], [sc, 0], [0, -sc], [0, sc]]) pass(oc, dx, dy);
+      pass(col, 0, 0, true);
+    } else {
+      if (o.outline) { for (const [dx, dy] of [[-sc, 0], [sc, 0], [0, -sc], [0, sc], [-sc, -sc], [sc, sc], [-sc, sc], [sc, -sc]]) pass(oc, dx, dy); }
+      else if (o.shadow !== false) pass(o.shadowColor || '#0b0a12', sc, sc);
+      pass(col, 0, 0);
+    }
     if (o.alpha !== undefined) ctx.globalAlpha = 1;
     return w;
   };
@@ -156,6 +173,15 @@
     ctx.fillStyle = '#0b0a12'; ctx.fillRect(x + 1, y, w - 2, 1); ctx.fillRect(x + 1, y + h - 1, w - 2, 1); ctx.fillRect(x, y + 1, 1, h - 2); ctx.fillRect(x + w - 1, y + 1, 1, h - 2);
     ctx.fillStyle = b1; ctx.fillRect(x + 1, y + 1, w - 2, 1); ctx.fillRect(x + 1, y + h - 2, w - 2, 1); ctx.fillRect(x + 1, y + 1, 1, h - 2); ctx.fillRect(x + w - 2, y + 1, 1, h - 2);
     if (o.light !== false) { ctx.fillStyle = b2; ctx.fillRect(x + 2, y + 2, w - 4, 1); }
+    // Navidad: montoncito de nieve sobre el borde y carámbanos colgando (o.snow: false para sacarlo)
+    if (o.snow !== false && w > 24) {
+      for (let k = 1; k < w - 1; k++) {
+        const hh = 2 + ((k * 7 + x) % 9 === 0 ? 1 : 0) + (k > 3 && k < w - 4 ? 1 : 0);
+        ctx.fillStyle = '#f4f8ff'; ctx.fillRect(x + k, y - hh + 2, 1, hh - 1); ctx.fillStyle = '#c8d8f0'; ctx.fillRect(x + k, y + 1, 1, 1);
+      }
+      ctx.fillStyle = '#9fc4ee';
+      for (let k = 6 + ((x * 3) % 7); k < w - 4; k += 11 + ((k + x) % 5)) ctx.fillRect(x + k, y + 2, 1, 2 + ((k + x) % 3));
+    }
   };
   // botón 8-bit; devuelve el rectángulo para detectar toques
   X.button = function (label, cx, cy, w, h, o = {}) {

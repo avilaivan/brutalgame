@@ -310,7 +310,7 @@
       const X = NV.X, W = X.W;
       bg(ctx, G, 0.7);
       X.text('¡SE ACABÓ EL TIEMPO!', W / 2, 90, { scale: 3, align: 'center', color: '#ff2e4a', outline: true });
-      X.text('EL APAGÓN CORTÓ LA NAVIDANCE', W / 2, 124, { scale: 1, align: 'center', color: '#4de2ff' });
+      X.text('MECHA-NOEL SE ROBÓ LA NAVIDANCE', W / 2, 124, { scale: 1, align: 'center', color: '#4de2ff' });
       X.text('TENÉS 3 MINUTOS PARA LLEGAR Y VENCERLO', W / 2, 140, { align: 'center', color: '#8ea2c4' });
       menu(G, [
         { label: 'OTRA VEZ', x: W / 2 - 70, y: 200, w: 130, h: 32, color: '#b3132b', act: () => G.startRun(G.heroKey) },

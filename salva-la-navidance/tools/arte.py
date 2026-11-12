@@ -1,7 +1,8 @@
 # =====================================================================
 #  GENERADOR DE ARTE 8-BIT — Salva la Navidance · BRUTAL. (9 de Julio)
 #  Dibuja píxel por píxel (sin IA) el fondo de la ciudad de 9 de Julio,
-#  los tiles, los enemigos y el jefe EL APAGÓN, y escribe sus metadatos
+#  en Navidad (nieve, luces, árbol de la plaza), los tiles, los enemigos
+#  navideños y el jefe MECHA-NOEL, y escribe sus metadatos
 #  en js/data/art-data.js.
 #
 #     python tools/arte.py
@@ -334,211 +335,389 @@ def deco_neumaticos():
 # ======================================================================
 #  ENEMIGOS (mismos tamaños de cuadro que usa el código)
 # ======================================================================
+
+# ======================================================================
+#  NAVIDAD: nieve en los techos, luces, árbol de la plaza, trineo
+# ======================================================================
+SNOW, SNOW2, ICE = hx('f4f8ff'), hx('c8d8f0'), hx('9fc4ee')
+XMAS = [hx('ff2e4a'), hx('33e07a'), hx('f5c542'), hx('4de2ff'), hx('ff4fd8')]
+
+def nevar(path, grosor=3, min_run=3):
+    """pone nieve sobre todas las superficies horizontales de una capa (techos, cornisas, silos)"""
+    im = Image.open(path).convert('RGBA'); W, H = im.size; a = im.load()
+    tops = []
+    for x in range(W):
+        for y in range(1, H):
+            if a[x, y][3] > 0 and a[x, y - 1][3] == 0 and y + 2 < H and a[x, y + 1][3] > 0 and a[x, y + 2][3] > 0:
+                # superficie (2 px de espesor como mínimo: los cables no juntan nieve): hay opaco a los costados en la misma fila
+                if sum(1 for dx in range(-min_run // 2 - 1, min_run // 2 + 2) if 0 <= x + dx < W and a[x + dx, y][3] > 0) >= min_run:
+                    tops.append((x, y))
+    rnd = random.Random(5)
+    for x, y in tops:
+        g = grosor + (1 if (x * 7 + y) % 5 == 0 else 0)
+        for k in range(g):
+            if y - k - 1 >= 0: a[x, y - k - 1] = SNOW if k < g - 1 else SNOW2
+        if rnd.random() < 0.06 and y + 3 < H:  # carámbanos
+            for k in range(rnd.randint(2, 4)):
+                if a[x, y + k][3] > 0: a[x, y + k] = ICE
+    im.save(path)
+
+def luces_techos(path, base_y=0, every=6, extra=None):
+    """guirnaldas de lamparitas siguiendo el borde de los techos; devuelve posiciones para que titilen"""
+    im = Image.open(path).convert('RGBA'); W, H = im.size; a = im.load(); out = []
+    for x in range(2, W - 2, every):
+        for y in range(1, H - 6):
+            if a[x, y][3] > 0 and a[x, y - 1][3] == 0 and a[x, y][:3] in (SNOW[:3], SNOW2[:3]):
+                yy = y + 5
+                if yy < H and a[x, yy][3] > 0: out.append([x, yy])
+                break
+    return out
+
+def arbol_plaza(d, im, x, base, h=150):
+    """árbol de Navidad gigante de la plaza, con estrella y adornos"""
+    for k in range(6):
+        w = 16 + k * 14; y0 = base - h + 18 + k * 22
+        d.polygon([(x, y0 - 18), (x - w // 2 - 10, y0 + 22), (x + w // 2 + 10, y0 + 22)], fill=P['tree1'])
+        d.polygon([(x, y0 - 18), (x - w // 2 - 10, y0 + 22), (x - w // 4, y0 + 22)], fill=P['tree2'])
+    R(d, x - 5, base - 14, 10, 14, P['brick1'])
+    star = [(x, base - h - 10), (x + 3, base - h - 3), (x + 10, base - h - 3), (x + 4, base - h + 2), (x + 7, base - h + 9), (x, base - h + 5), (x - 7, base - h + 9), (x - 4, base - h + 2), (x - 10, base - h - 3), (x - 3, base - h - 3)]
+    d.polygon(star, fill=P['yellow']); d.polygon(star[:5], fill=hx('fff1a8'))
+    bulbs = []
+    rnd = random.Random(x)
+    for k in range(40):
+        t = rnd.random(); yy = base - h + 10 + t * (h - 30); ww = (yy - (base - h)) * 0.42
+        xx = x + rnd.uniform(-ww, ww); bulbs.append([int(xx), int(yy)])
+    return bulbs
+
+def trineo(im, d, x, y):
+    """silueta del trineo con renos cruzando la luna"""
+    c = hx('0b0a18')
+    R(d, x, y + 4, 14, 4, c); d.line([(x - 2, y + 8), (x + 16, y + 8)], fill=c); R(d, x + 2, y, 4, 4, c)
+    for k in range(3):
+        rx = x + 20 + k * 11
+        R(d, rx, y + 2, 8, 3, c); R(d, rx + 1, y + 5, 1, 3, c); R(d, rx + 6, y + 5, 1, 3, c); R(d, rx + 7, y - 1, 2, 3, c)
+        px(im, rx + 9, y - 3, c); px(im, rx + 7, y - 3, c)
+        d.line([(rx - 3, y + 3), (rx, y + 3)], fill=c)
+    px(im, x + 54, y, P['red'])  # nariz roja
+
+def navidad_fondo():
+    sky_p = os.path.join(BG, 'sky.png'); im = Image.open(sky_p).convert('RGBA'); d = ImageDraw.Draw(im)
+    trineo(im, d, 488, 54); im.save(sky_p)
+    for name in ('far', 'near'): nevar(os.path.join(BG, name + '.png'), 3 if name != 'far' else 2)
+    # árbol gigante en la plaza (capa media) + luces en los techos
+    mp = os.path.join(BG, 'mid.png'); im = Image.open(mp).convert('RGBA'); d = ImageDraw.Draw(im)
+    b1 = arbol_plaza(d, im, 400, 330, 150); b2 = arbol_plaza(d, im, 1585, 330, 130); im.save(mp)
+    nevar(mp, 3)
+    techos = luces_techos(mp, every=7)
+    # coronas navideñas en las ventanas del primer plano
+    np_ = os.path.join(BG, 'near.png'); im = Image.open(np_).convert('RGBA'); d = ImageDraw.Draw(im)
+    for x in range(40, 1280, 110):
+        d.ellipse([x, 236, x + 11, 247], fill=P['green2']); d.ellipse([x + 3, 239, x + 8, 244], fill=(0, 0, 0, 0)); R(d, x + 4, 245, 4, 3, P['red'])
+    im.save(np_)
+    return b1 + b2 + techos
+
+# ======================================================================
+#  ENEMIGOS NAVIDEÑOS (mismos tamaños de cuadro que usa el código)
+# ======================================================================
 def sheet(frames):
     w, h = frames[0].size; s = new(w * len(frames), h)
     for i, f in enumerate(frames): s.alpha_composite(f, (i * w, 0))
     return s
 
 def patovica(f):
-    """Patovica de BRUTAL.: pelado, anteojos negros, cucaracha en la oreja, remera negra con la B. — salta al beat."""
+    """Muñeco Patovica: muñeco de nieve patovica de BRUTAL., anteojos negros, cucaracha y gorro negro. Salta al beat."""
     im = new(30, 34); d = ImageDraw.Draw(im); oy = 1 if f else 0
-    # piernas
-    R(d, 9, 26, 5, 8, P['denim']); R(d, 16, 26, 5, 8, P['denim']); R(d, 9, 26, 1, 8, P['denim2']); R(d, 16, 26, 1, 8, P['denim2'])
-    R(d, 8, 32, 7, 2, P['black']); R(d, 15, 32, 7, 2, P['black'])
-    # torso ancho
-    R(d, 4, 12 + oy, 22, 15 - oy, P['black']); R(d, 4, 12 + oy, 22, 1, P['grey1']); R(d, 4, 12 + oy, 2, 15, P['grey0'])
-    R(d, 13, 18 + oy, 4, 5, P['red'])  # B. en el pecho
-    R(d, 14, 19 + oy, 2, 1, P['white']); R(d, 14, 21 + oy, 2, 1, P['white'])
-    if f == 0:  # brazos cruzados
-        R(d, 5, 19, 20, 4, P['skin1']); R(d, 5, 19, 20, 1, P['skin2']); R(d, 5, 22, 20, 1, P['skin0'])
-    else:       # puños arriba
-        R(d, 1, 8, 4, 10, P['skin1']); R(d, 25, 8, 4, 10, P['skin1']); R(d, 0, 6, 6, 4, P['skin2']); R(d, 24, 6, 6, 4, P['skin2'])
-    # cabeza pelada
-    R(d, 10, 2 + oy, 10, 11, P['skin1']); R(d, 10, 2 + oy, 10, 2, P['skin2']); R(d, 18, 4 + oy, 2, 9, P['skin0'])
-    R(d, 9, 6 + oy, 12, 3, INK); R(d, 10, 6 + oy, 4, 1, P['cyan']); R(d, 16, 6 + oy, 4, 1, P['cyan'])  # anteojos
-    R(d, 12, 11 + oy, 6, 1, P['skin0'])  # boca seria
-    R(d, 20, 7 + oy, 1, 6, P['grey3']); R(d, 20, 13 + oy, 2, 1, P['grey3'])  # cucaracha
+    d.ellipse([3, 15, 26, 33], fill=SNOW); d.ellipse([3, 15, 10, 33], fill=SNOW2)  # cuerpo
+    for k in (19, 24, 29): R(d, 14, k, 2, 2, P['black'])  # botones de carbón
+    d.ellipse([7, 4 + oy, 22, 18 + oy], fill=SNOW); d.ellipse([7, 4 + oy, 12, 18 + oy], fill=SNOW2)  # cabeza
+    R(d, 7, 9 + oy, 16, 3, INK); R(d, 8, 9 + oy, 5, 1, P['cyan']); R(d, 16, 9 + oy, 5, 1, P['cyan'])  # anteojos
+    R(d, 15, 12 + oy, 6, 2, P['amber'])  # nariz de zanahoria
+    R(d, 12, 15 + oy, 6, 1, P['grey1'])
+    R(d, 7, 1 + oy, 16, 5, P['black']); R(d, 6, 5 + oy, 18, 2, P['grey1']); R(d, 13, 2 + oy, 4, 2, P['red'])  # gorro con la B.
+    R(d, 22, 9 + oy, 1, 6, P['grey3'])  # cucaracha
+    R(d, 6, 16, 18, 3, P['red']); R(d, 18, 16, 4, 8, P['red2'])  # bufanda
+    if f == 0:  # brazos de rama cruzados
+        d.line([(4, 22), (25, 25)], fill=P['brick1'], width=2); d.line([(4, 25), (25, 22)], fill=P['brick1'], width=2)
+    else:
+        d.line([(5, 20), (0, 10)], fill=P['brick1'], width=2); d.line([(24, 20), (29, 10)], fill=P['brick1'], width=2)
+        px(im, 0, 9, P['brick2']); px(im, 29, 9, P['brick2'])
     return outline(im)
 
-def bafle(f):
-    """Bafle poseído: caja de sonido con patas, LEDs enojados y una bocina que dispara notas."""
+def regalo(f):
+    """Regalo Poseído: caja con moño, ojos que espían por la tapa y un cañón de cotillón que tira bastones de caramelo."""
     im = new(30, 44); d = ImageDraw.Draw(im)
-    pump = 1 if f in (1, 3) else 0
-    R(d, 9, 39, 3, 5, P['grey2']); R(d, 18, 39, 3, 5, P['grey2']); R(d, 7, 42, 6, 2, P['black']); R(d, 17, 42, 6, 2, P['black'])
-    R(d, 5, 3, 20, 37, P['black']); R(d, 5, 3, 20, 1, P['grey2']); R(d, 5, 3, 1, 37, P['grey1']); R(d, 24, 3, 1, 37, P['grey0'])
-    for cx, cy in ((5, 3), (22, 3), (5, 37), (22, 37)): R(d, cx, cy, 3, 3, P['grey3'])
-    eye = P['red'] if f == 2 else P['amber']
-    R(d, 9, 7, 4, 2, eye); R(d, 17, 7, 4, 2, eye); px(im, 9, 6, eye); px(im, 20, 6, eye)  # cejas en V
-    if f == 2: R(d, 8, 6, 14, 1, P['red2'])
-    d.ellipse([10, 11, 19, 20], fill=P['grey1']); d.ellipse([12, 13, 17, 18], fill=P['grey0']); R(d, 14, 15, 2, 2, P['grey3'])
-    r = 7 + pump
-    d.ellipse([15 - r, 30 - r, 14 + r, 29 + r], fill=P['grey1']); d.ellipse([15 - r + 2, 30 - r + 2, 14 + r - 2, 29 + r - 2], fill=P['grey0'])
-    d.ellipse([12, 27, 17, 32], fill=P['steel1']); R(d, 14, 28, 2, 2, P['steel3'])
-    # bocina lateral (apunta a la derecha; el código la espeja)
-    R(d, 25, 19, 3, 6, P['grey2']); R(d, 27, 17, 2, 10, P['grey3'])
-    if f == 3:
-        R(d, 29, 20, 1, 4, P['pink']); px(im, 29, 18, P['white']); px(im, 29, 25, P['white'])
-    if f == 2: R(d, 27, 21, 2, 2, P['pink'])
+    lid = 3 if f == 3 else (1 if f in (1, 2) else 0)
+    R(d, 4, 16, 22, 26, P['red']); R(d, 4, 16, 3, 26, hx('ff6a7e')); R(d, 23, 16, 3, 26, P['red2'])
+    R(d, 13, 16, 4, 26, P['yellow']); R(d, 13, 16, 1, 26, hx('fff1a8'))  # cinta
+    for k in range(18, 42, 6): px(im, 8, k, hx('ff9aa8')); px(im, 20, k + 3, hx('ff9aa8'))  # estampado
+    R(d, 2, 10 - lid, 26, 7, P['red2']); R(d, 2, 10 - lid, 26, 2, P['red']); R(d, 13, 10 - lid, 4, 7, P['yellow2'])  # tapa
+    d.ellipse([7, 2 - lid, 14, 9 - lid], fill=P['yellow']); d.ellipse([16, 2 - lid, 23, 9 - lid], fill=P['yellow']); R(d, 13, 5 - lid, 4, 4, P['yellow2'])  # moño
+    eye = P['red'] if f == 2 else P['yellow']
+    R(d, 4, 17, 22, 3 + lid, INK)
+    if lid: R(d, 8, 17, 3, 2, eye); R(d, 19, 17, 3, 2, eye)
+    R(d, 26, 24, 3, 6, P['green2']); R(d, 28, 22, 2, 10, P['green'])  # cañón de cotillón
+    if f == 3: R(d, 29, 25, 1, 4, P['white']); px(im, 29, 21, P['yellow']); px(im, 29, 32, P['yellow'])
+    R(d, 7, 42, 5, 2, P['black']); R(d, 18, 42, 5, 2, P['black'])  # patitas
     return outline(im)
 
-def dron(f):
-    """Dron de control del Apagón: cuerpo con cámara roja, hélices que giran y sirena."""
+def esfera(f):
+    """Esfera Maldita: bola del árbol que vuela con alitas de murciélago y un ojo que brilla."""
     im = new(30, 28); d = ImageDraw.Draw(im)
-    R(d, 4, 9, 22, 2, P['grey2'])  # brazos
-    for hx_ in (3, 23):
-        R(d, hx_ + 1, 6, 2, 4, P['grey1'])
-        blade = [(hx_ - 4, 5, 12, 1), (hx_ - 1, 4, 6, 3), (hx_ - 3, 5, 10, 1)][f]
-        R(d, blade[0], blade[1], blade[2], blade[3], P['grey4'])
-    R(d, 9, 10, 12, 10, P['steel1']); R(d, 9, 10, 12, 2, P['steel3']); R(d, 9, 18, 12, 2, P['steel0'])
-    d.ellipse([11, 12, 18, 19], fill=INK); d.ellipse([13, 14, 16, 17], fill=P['red']); px(im, 14, 14, P['white'])
-    R(d, 13, 8, 4, 2, P['red'] if f != 1 else P['cyan'])  # sirena
-    R(d, 12, 20, 6, 3, P['grey1']); R(d, 13, 23, 4, 2, P['yellow'])  # reflector
+    wy = [4, 10, 15][f]
+    d.polygon([(9, 13), (0, wy), (2, 17), (6, 15)], fill=P['grey1']); d.polygon([(21, 13), (30, wy), (28, 17), (24, 15)], fill=P['grey1'])
+    d.ellipse([7, 6, 23, 22], fill=P['green']); d.ellipse([7, 6, 13, 22], fill=hx('7cff9e')); d.ellipse([18, 8, 23, 20], fill=P['green2'])
+    R(d, 7, 13, 16, 2, P['yellow']); [px(im, k, 13, P['white']) for k in range(8, 23, 4)]  # cinta dorada
+    R(d, 12, 3, 6, 4, P['grey3']); R(d, 13, 2, 4, 1, P['grey4']); px(im, 15, 1, P['grey2'])  # capuchón
+    d.ellipse([12, 15, 18, 21], fill=INK); R(d, 14, 17, 2, 2, P['red'] if f != 1 else hx('ffd0d6'))
+    px(im, 9, 9, P['white'])
     return outline(im)
 
-def chispa(f):
-    """Chispa: electricista malvado con casco amarillo y visor rojo que tira fusibles."""
+def duende(f):
+    """Duende Travieso: gorro verde con cascabel, orejas puntiagudas y una bola de Navidad para tirar."""
     im = new(24, 30); d = ImageDraw.Draw(im)
     jump = f == 2
-    if jump: R(d, 7, 22, 4, 4, P['denim']); R(d, 13, 22, 4, 4, P['denim'])
-    else: R(d, 7, 23, 4, 6, P['denim']); R(d, 13, 23, 4, 6, P['denim']); R(d, 6, 28, 6, 2, P['black']); R(d, 12, 28, 6, 2, P['black'])
-    R(d, 6, 13, 12, 11, P['denim2']); R(d, 6, 13, 12, 1, P['steel2'])
-    d.polygon([(12, 15), (10, 19), (12, 19), (11, 22), (14, 17), (12, 17), (13, 15)], fill=P['yellow'])  # rayo
-    R(d, 7, 5, 10, 9, P['skin1']); R(d, 7, 9, 10, 3, INK); R(d, 8, 10, 3, 1, P['red']); R(d, 13, 10, 3, 1, P['red'])  # visor
-    R(d, 5, 3, 14, 3, P['yellow']); R(d, 7, 1, 10, 3, P['yellow']); R(d, 7, 1, 10, 1, (255, 240, 160, 255)); R(d, 5, 5, 14, 1, P['yellow2'])
-    R(d, 9, 12, 6, 1, P['skin0'])
-    if f == 1:  # brazo arriba con fusible
-        R(d, 17, 4, 3, 10, P['denim2']); R(d, 17, 0, 4, 5, P['red']); px(im, 18, 0, P['white'])
+    if jump: R(d, 7, 22, 4, 4, P['green2']); R(d, 13, 22, 4, 4, P['red'])
     else:
-        R(d, 3, 14, 3, 7, P['denim2']); R(d, 18, 14, 3, 7, P['denim2']); R(d, 18, 20, 4, 4, P['red'])
+        R(d, 7, 23, 4, 5, P['green2']); R(d, 13, 23, 4, 5, P['red'])
+        R(d, 5, 27, 6, 2, P['brick1']); R(d, 13, 27, 6, 2, P['brick1']); px(im, 5, 26, P['brick1']); px(im, 18, 26, P['brick1'])  # zapatos curvos
+    R(d, 6, 14, 12, 10, P['green']); R(d, 6, 14, 12, 1, hx('7cff9e')); R(d, 6, 20, 12, 2, P['brick1']); R(d, 11, 20, 2, 2, P['yellow'])  # cinturón
+    for k in range(6, 18, 2): px(im, k, 24, P['red'])  # dobladillo en zigzag
+    R(d, 8, 7, 9, 8, P['skin2']); R(d, 5, 9, 3, 2, P['skin2']); R(d, 17, 9, 3, 2, P['skin2']); px(im, 4, 8, P['skin2']); px(im, 20, 8, P['skin2'])  # cara y orejas
+    R(d, 9, 10, 2, 2, INK); R(d, 14, 10, 2, 2, INK); px(im, 10, 10, P['red']); px(im, 15, 10, P['red'])
+    R(d, 10, 13, 5, 1, P['skin0']); px(im, 9, 12, P['skin0']); px(im, 15, 12, P['skin0'])  # sonrisa malvada
+    d.polygon([(7, 8), (18, 8), (22, 1), (14, 3)], fill=P['green']); R(d, 7, 7, 11, 2, SNOW)  # gorro
+    d.ellipse([20, 0, 23, 3], fill=P['yellow'])  # cascabel
+    if f == 1: R(d, 17, 5, 3, 9, P['green']); d.ellipse([16, 0, 22, 6], fill=P['red']); px(im, 17, 1, P['white'])
+    else: R(d, 3, 15, 3, 6, P['green']); R(d, 18, 15, 3, 6, P['green']); d.ellipse([18, 19, 23, 24], fill=P['red'])
     return outline(im)
 
-def fusible(f):
-    """bomba de fusible (rojo / verde) con chispa"""
+def bola(f):
+    """bola de Navidad bomba (roja / verde) con mecha"""
     im = new(10, 11); d = ImageDraw.Draw(im)
     col = P['red'] if f < 2 else P['green']; dark = P['red2'] if f < 2 else P['green2']
-    R(d, 3, 1, 4, 2, P['grey3']); d.ellipse([1, 3, 8, 10], fill=col); d.ellipse([2, 4, 4, 6], fill=P['white']); R(d, 6, 8, 2, 2, dark)
+    R(d, 3, 1, 4, 2, P['yellow']); d.ellipse([1, 3, 8, 10], fill=col); d.ellipse([2, 4, 4, 6], fill=P['white']); R(d, 6, 8, 2, 2, dark)
+    R(d, 2, 6, 6, 1, P['yellow'])
     sp = (4, 0) if f % 2 == 0 else (6, 0)
     px(im, sp[0], sp[1], P['yellow']); px(im, sp[0] + 1, sp[1], P['white'])
     return im
 
-def onda(f):
-    """onda eléctrica del pisotón del jefe"""
+def onda_nieve(f):
+    """onda de nieve y hielo del pisotón del jefe"""
     im = new(20, 16); d = ImageDraw.Draw(im)
-    pts = [(0, 15), (3, 8 + f * 2), (6, 13), (9, 3), (12, 12 - f), (15, 6), (19, 15)]
-    d.line(pts, fill=P['cyan'], width=3); d.line(pts, fill=P['white'], width=1)
+    for k in range(0, 20, 4):
+        h = 6 + ((k // 4 + f) % 3) * 3
+        d.polygon([(k, 16), (k + 2, 16 - h), (k + 4, 16)], fill=ICE); R(d, k + 1, 16 - h + 2, 1, h - 3, SNOW)
     return im
 
-def nota():
+def baston():
+    """bastón de caramelo (disparo del Regalo Poseído)"""
     im = new(12, 4); d = ImageDraw.Draw(im)
-    R(d, 0, 0, 12, 4, P['pink']); R(d, 2, 1, 9, 2, P['white']); return im
+    for k in range(12): R(d, k, 0, 1, 4, P['red'] if (k // 2) % 2 else SNOW)
+    R(d, 0, 0, 12, 1, P['white']); return im
+
+def disparo(col, light):
+    """disparo del DJ: estrella navideña de energía (2 cuadros)"""
+    fr = []
+    for f in range(2):
+        im = new(14, 8); d = ImageDraw.Draw(im)
+        R(d, 0, 3, 8, 2, col); R(d, 2, 3, 6, 2, light)
+        cx, cy = 10, 4
+        pts = [(cx, cy - 4), (cx + 1, cy - 1), (cx + 4, cy), (cx + 1, cy + 1), (cx, cy + 4), (cx - 1, cy + 1), (cx - 4, cy), (cx - 1, cy - 1)] if f == 0 else \
+              [(cx - 3, cy - 3), (cx, cy - 1), (cx + 3, cy - 3), (cx + 1, cy), (cx + 3, cy + 3), (cx, cy + 1), (cx - 3, cy + 3), (cx - 1, cy)]
+        d.polygon(pts, fill=light); px(im, cx, cy, P['white'])
+        fr.append(im)
+    return sheet(fr)
 
 # ======================================================================
-#  JEFE: EL APAGÓN (150x132, 6 cuadros)
-#   0-1 quieto · 2 apunta · 3 dispara · 4 pisotón · 5 vencido
+#  JEFE: MECHA-NOEL (150x132, 6 cuadros)
+#   Papá Noel robot gigante (folclore, diseño propio). Lentes = láseres,
+#   hebilla del cinturón = núcleo que brilla en el descanso.
+#   0-1 quieto · 2 apunta · 3 dispara ("¡JO JO JO!") · 4 pisotón · 5 vencido
 # ======================================================================
-LENS_L, LENS_R, CORE = (52, 36), (76, 36), (72, 82)
-def apagon(f):
+LENS_L, LENS_R, CORE = (60, 40), (84, 40), (75, 92)
+def noel(f):
     im = new(150, 132); d = ImageDraw.Draw(im)
-    oy = 2 if f == 1 else 0
-    dead = f == 5
-    # piernas: torres de alta tensión cortas
-    for lx in (40, 92):
-        d.polygon([(lx, 132), (lx + 6, 104), (lx + 18, 104), (lx + 24, 132)], fill=P['steel0'])
-        d.line([(lx + 3, 130), (lx + 18, 106)], fill=P['steel2']); d.line([(lx + 21, 130), (lx + 6, 106)], fill=P['steel2'])
-        R(d, lx - 2, 128, 28, 4, P['grey1'])
-    # cuerpo: transformador con aletas de refrigeración
-    bx, by, bw, bh = 34, 56 + oy, 84, 52
-    for k in range(6): R(d, bx - 8, by + 6 + k * 7, 8, 4, P['steel1']); R(d, bx + bw, by + 6 + k * 7, 8, 4, P['steel1'])
-    R(d, bx, by, bw, bh, P['steel1']); R(d, bx, by, bw, 3, P['steel3']); R(d, bx, by, 3, bh, P['steel2']); R(d, bx + bw - 3, by, 3, bh, P['steel0'])
-    R(d, bx, by + bh - 4, bw, 4, P['steel0'])
-    for k in range(bx + 6, bx + bw - 6, 6): R(d, k, by + 6, 1, 10, P['steel0'])  # remaches/rejillas
-    # cartel de peligro
-    d.polygon([(bx + 10, by + 40), (bx + 19, by + 24), (bx + 28, by + 40)], fill=P['yellow']); d.polygon([(bx + 13, by + 38), (bx + 19, by + 28), (bx + 25, by + 38)], fill=INK)
-    d.polygon([(bx + 19, by + 29), (bx + 17, by + 34), (bx + 19, by + 34), (bx + 18, by + 37), (bx + 21, by + 32), (bx + 19, by + 32)], fill=P['yellow'])
-    # núcleo: palanca de corte (brilla en el descanso)
+    oy = 2 if f == 1 else 0; dead = f == 5
+    RED, RED2, RED3, FUR = P['red'], P['red2'], P['red3'], SNOW
+    # botas
+    for bx_ in (40, 86):
+        R(d, bx_, 114, 26, 18, P['black']); R(d, bx_, 114, 26, 3, P['grey1']); R(d, bx_ - 2, 128, 30, 4, P['grey0'])
+        R(d, bx_, 108, 26, 6, FUR)
+    # cuerpo/panza
+    d.ellipse([28, 52 + oy, 124, 118], fill=RED); d.ellipse([28, 52 + oy, 60, 118], fill=hx('ff6a7e')); d.ellipse([100, 60 + oy, 124, 116], fill=RED2)
+    for k in range(40, 116, 12): R(d, k, 70 + oy, 3, 3, RED3)  # remaches de la armadura
+    R(d, 72, 54 + oy, 8, 52, FUR)  # piel del centro
+    # cinturón + hebilla (núcleo)
+    R(d, 30, 86 + oy, 92, 12, P['black']); R(d, 30, 86 + oy, 92, 2, P['grey1'])
     cx, cy = CORE[0], CORE[1] + oy
-    R(d, cx - 12, cy - 12, 24, 24, INK); R(d, cx - 10, cy - 10, 20, 20, P['grey1'])
-    lev = (cx - 2, cy - 9) if not dead else (cx - 2, cy + 1)
-    R(d, lev[0], lev[1], 4, 8, P['red']); R(d, cx - 5, cy - 1, 10, 3, P['grey3'])
-    R(d, cx - 9, cy - 9, 3, 2, P['green'] if not dead else P['grey2']); R(d, cx + 6, cy + 6, 3, 2, P['red2'])
-    # brazos de cable con pinzas
+    R(d, cx - 11, cy - 8, 22, 16, P['yellow']); R(d, cx - 7, cy - 4, 14, 8, P['black'] if not dead else P['grey1']); R(d, cx - 11, cy - 8, 22, 2, hx('fff1a8'))
+    # brazos mecánicos
     arm_up = f == 4
-    for side, ax in ((-1, bx - 8), (1, bx + bw + 8)):
-        sx = ax; sy = by + 10
-        ex = sx + side * 18; ey = (sy - 50) if (arm_up and side == 1) else (sy + 34)
-        d.line([(sx, sy), (ex, ey)], fill=INK, width=7); d.line([(sx, sy), (ex, ey)], fill=P['black'], width=5)
-        d.line([(sx, sy), (ex, ey)], fill=P['grey1'], width=1)
-        # pinza (morsa de batería)
-        jc = P['red'] if side == -1 else P['grey0']
-        R(d, ex - 7, ey - 4, 14, 8, jc); R(d, ex - 7, ey - 4, 14, 2, P['red'] if side == -1 else P['grey2'])
-        for k in range(-6, 7, 3): px(im, ex + k, ey + 4, P['steel3'])
-    # cabeza: caja de medidor con dos lentes
-    hx0, hy0 = 40, 18 + oy
-    R(d, hx0, hy0, 72, 40, P['steel1']); R(d, hx0, hy0, 72, 3, P['steel3']); R(d, hx0, hy0, 3, 40, P['steel2']); R(d, hx0 + 69, hy0, 3, 40, P['steel0'])
-    # aisladores de porcelana con chispa en la cabeza
-    for ix in (hx0 + 8, hx0 + 32, hx0 + 56):
-        for k in range(4): R(d, ix - 3 + (k % 2), hy0 - 4 - k * 4, 8 - 2 * (k % 2), 3, P['stone3'] if k % 2 == 0 else P['stone2'])
-    if not dead and f in (2, 3):
-        d.line([(hx0 + 11, hy0 - 20), (hx0 + 22, hy0 - 26), (hx0 + 35, hy0 - 20)], fill=P['cyan'])
+    for side, sx in ((-1, 32), (1, 120)):
+        sy = 66 + oy; ex = sx + side * 16; ey = (sy - 52) if (arm_up and side == 1) else (sy + 30)
+        d.line([(sx, sy), (ex, ey)], fill=INK, width=12); d.line([(sx, sy), (ex, ey)], fill=RED, width=9); d.line([(sx, sy), (ex, ey)], fill=hx('ff6a7e'), width=2)
+        d.ellipse([ex - 8, ey - 4, ex + 8, ey + 10], fill=FUR)  # puño de piel / guante
+        d.ellipse([ex - 7, ey + 2, ex + 7, ey + 14], fill=P['black']); R(d, ex - 4, ey + 4, 8, 2, P['grey2'])
+    if arm_up:  # bolsa de regalos en alto
+        d.ellipse([124, 0, 150, 22], fill=P['brick2']); R(d, 134, 18, 6, 4, P['yellow'])
+    # barba de placas metálicas
+    hx0, hy0 = 48, 18 + oy
+    d.polygon([(hx0 - 2, hy0 + 30), (hx0 + 54, hy0 + 30), (hx0 + 46, hy0 + 52), (hx0 + 26, hy0 + 60), (hx0 + 6, hy0 + 52)], fill=SNOW)
+    for k in range(hx0, hx0 + 52, 6): R(d, k, hy0 + 34, 1, 14, SNOW2)
+    # cara de acero
+    R(d, hx0, hy0 + 8, 52, 26, P['steel2']); R(d, hx0, hy0 + 8, 52, 3, P['steel3']); R(d, hx0 + 49, hy0 + 8, 3, 26, P['steel1'])
+    # anteojos/lentes láser (rojo y verde, colores navideños)
     for i, (lx, ly) in enumerate((LENS_L, LENS_R)):
         ly2 = ly + oy
-        d.ellipse([lx - 9, ly2 - 9, lx + 9, ly2 + 9], fill=INK); d.ellipse([lx - 7, ly2 - 7, lx + 7, ly2 + 7], fill=P['grey1'])
+        d.ellipse([lx - 9, ly2 - 8, lx + 9, ly2 + 8], fill=INK); d.ellipse([lx - 7, ly2 - 6, lx + 7, ly2 + 6], fill=P['grey1'])
         if dead:
-            d.line([(lx - 4, ly2 - 4), (lx + 4, ly2 + 4)], fill=P['grey3'], width=2); d.line([(lx + 4, ly2 - 4), (lx - 4, ly2 + 4)], fill=P['grey3'], width=2)
-            continue
-        col = P['red'] if i == 0 else P['green']
+            d.line([(lx - 4, ly2 - 3), (lx + 4, ly2 + 3)], fill=P['grey3'], width=2); d.line([(lx + 4, ly2 - 3), (lx - 4, ly2 + 3)], fill=P['grey3'], width=2); continue
+        col = P['white'] if f == 3 else (P['red'] if i == 0 else P['green'])
         rr = 5 if f in (2, 3) else 4
-        if f == 3: col = P['white']
-        d.ellipse([lx - rr, ly2 - rr, lx + rr, ly2 + rr], fill=col)
-        if f == 2: d.ellipse([lx - 7, ly2 - 7, lx + 7, ly2 + 7], outline=P['white'])
+        d.ellipse([lx - rr, ly2 - rr + 1, lx + rr, ly2 + rr - 1], fill=col)
+        if f == 2: d.ellipse([lx - 7, ly2 - 6, lx + 7, ly2 + 6], outline=P['white'])
         px(im, lx - 2, ly2 - 2, P['white'])
-    # boca: rejilla de medidor
-    my_ = hy0 + 30
-    if f == 3 or f == 4: R(d, 58, my_ - 1, 36, 7, INK); R(d, 60, my_ + 1, 32, 3, P['amber'])
-    else:
-        R(d, 58, my_, 36, 5, INK)
-        for k in range(60, 92, 4): R(d, k, my_ + 1, 2, 3, P['grey2'] if not dead else P['grey1'])
-    # display "OFF" en la frente
-    R(d, 64, hy0 + 6, 24, 9, INK)
-    for gx, gy in ((66, 8), (67, 8), (68, 8), (66, 9), (68, 9), (66, 10), (67, 10), (68, 10), (71, 8), (72, 8), (73, 8), (71, 9), (72, 9), (71, 10), (76, 8), (77, 8), (78, 8), (76, 9), (77, 9), (76, 10)):
-        px(im, gx, hy0 + gy - 2 + 3, P['red'] if not dead else P['red3'])
-    if dead:  # humo
-        for k in range(6): d.ellipse([60 + k * 6, 4 + (k % 2) * 4, 70 + k * 6, 14 + (k % 2) * 4], fill=P['grey1'])
+    R(d, 69, 40 + oy, 6, 2, INK)  # puente de los anteojos
+    R(d, 69, 46 + oy, 6, 5, hx('ff9aa8'))  # nariz
+    # bigote y boca
+    d.ellipse([56, 50 + oy, 74, 57 + oy], fill=SNOW); d.ellipse([70, 50 + oy, 88, 57 + oy], fill=SNOW)
+    if f in (3, 4): R(d, 64, 56 + oy, 16, 6, INK); R(d, 66, 57 + oy, 12, 2, P['red'])
+    # gorro con pompón
+    d.polygon([(hx0 - 4, hy0 + 10), (hx0 + 56, hy0 + 10), (hx0 + 70, hy0 - 12), (hx0 + 30, hy0 - 16)], fill=RED)
+    d.polygon([(hx0 + 30, hy0 - 16), (hx0 + 70, hy0 - 12), (hx0 + 56, hy0 + 10)], fill=RED2)
+    R(d, hx0 - 6, hy0 + 6, 64, 8, FUR); R(d, hx0 - 6, hy0 + 12, 64, 2, SNOW2)
+    d.ellipse([hx0 + 64, hy0 - 20, hx0 + 78, hy0 - 6], fill=FUR)
+    if dead:
+        for k in range(6): d.ellipse([58 + k * 6, 2 + (k % 2) * 4, 68 + k * 6, 12 + (k % 2) * 4], fill=P['grey1'])
     return outline(im)
 
-def apagon_card():
-    """retrato del jefe para la presentación VS (reemplaza al personaje con derechos de autor)"""
+def noel_card():
+    """retrato del jefe para la presentación VS"""
     W, H = 404, 390; im = Image.new('RGBA', (W, H), P['night0']); d = ImageDraw.Draw(im)
     for y in range(H): R(d, 0, y, W, 1, lerp(P['night0'], P['red3'], y / H * 0.9))
-    for k in range(0, W, 24): d.line([(k, H), (W // 2, H // 2)], fill=lerp(P['night1'], P['red3'], 0.5))
-    boss = apagon(3).resize((150 * 3, 132 * 3), Image.NEAREST)
+    rnd = random.Random(2)
+    for k in range(120): x, y = rnd.randrange(W), rnd.randrange(H); R(d, x, y, 2, 2, SNOW)
+    boss = noel(3).resize((150 * 3, 132 * 3), Image.NEAREST)
     im.alpha_composite(boss, (W // 2 - boss.width // 2 + 10, H - boss.height + 20))
-    im.convert('RGB').save(os.path.join(IMG, 'apagon_card.png'))
+    im.convert('RGB').save(os.path.join(IMG, 'noel_card.png'))
+
+# ======================================================================
+#  DECORACIÓN NAVIDEÑA (se pueden pisar los bafles y las consolas)
+# ======================================================================
+def deco_navidad():
+    # bafle con moño y nieve arriba (32x64: 4 tiles, tiene tarima)
+    im = new(32, 64); d = ImageDraw.Draw(im)
+    R(d, 1, 4, 30, 60, P['black']); R(d, 1, 4, 30, 2, P['grey2'])
+    for cy, r in ((22, 9), (46, 12)):
+        d.ellipse([16 - r, cy - r, 15 + r, cy + r], fill=P['grey1']); d.ellipse([16 - r + 3, cy - r + 3, 15 + r - 3, cy + r - 3], fill=P['grey0']); R(d, 15, cy - 1, 2, 2, P['grey3'])
+    R(d, 14, 4, 4, 60, P['red']); R(d, 0, 0, 32, 5, SNOW); R(d, 0, 4, 32, 1, SNOW2)
+    d.ellipse([8, 0, 15, 6], fill=P['red']); d.ellipse([17, 0, 24, 6], fill=P['red'])
+    im.save(os.path.join(BG, 'deco_speaker.png'))
+    # consola de DJ con gorro navideño (32x32, tiene tarima)
+    im = new(32, 32); d = ImageDraw.Draw(im)
+    R(d, 0, 6, 32, 26, P['steel0']); R(d, 0, 6, 32, 2, P['steel2']); R(d, 3, 10, 26, 10, (40, 16, 20, 255))
+    for k, c in enumerate((P['cyan'], P['green'], P['red'], P['yellow'])): R(d, 4 + k * 7, 24, 4, 3, c)
+    R(d, 0, 2, 32, 5, SNOW)
+    d.polygon([(20, 2), (30, 2), (32, -6)], fill=P['red'])
+    im.save(os.path.join(BG, 'deco_console.png'))
+    # pila de nieve con bastón de caramelo
+    im = new(32, 10); d = ImageDraw.Draw(im)
+    d.ellipse([0, 2, 31, 18], fill=SNOW); d.ellipse([0, 2, 12, 18], fill=SNOW2)
+    for k in range(7): R(d, 22, k, 2, 1, P['red'] if k % 2 else SNOW)
+    R(d, 22, 0, 4, 1, P['red']); R(d, 25, 1, 1, 2, P['red'])
+    im.save(os.path.join(BG, 'deco_snow.png'))
+    # pino con estrella, guirnaldas y nieve
+    im = new(30, 46); d = ImageDraw.Draw(im)
+    for k in range(3):
+        y0 = 6 + k * 11; w = 8 + k * 6
+        d.polygon([(15, y0), (15 - w, y0 + 16), (15 + w, y0 + 16)], fill=P['green2']); d.polygon([(15, y0), (15 - w, y0 + 16), (15 - w // 3, y0 + 16)], fill=P['green'])
+        R(d, 15 - w + 2, y0 + 14, w * 2 - 4, 2, SNOW)
+    R(d, 12, 40, 6, 6, P['brick1'])
+    d.polygon([(15, 0), (17, 4), (21, 4), (18, 7), (19, 11), (15, 8), (11, 11), (12, 7), (9, 4), (13, 4)], fill=P['yellow'])
+    im.save(os.path.join(BG, 'deco_tree.png'))
+    # farola con corona
+    im = new(12, 52); d = ImageDraw.Draw(im)
+    R(d, 5, 6, 2, 46, P['grey1']); R(d, 2, 0, 8, 7, P['grey2']); R(d, 3, 2, 6, 4, hx('fff3c4')); R(d, 2, 0, 8, 2, SNOW)
+    d.ellipse([1, 16, 10, 25], fill=P['green2']); d.ellipse([4, 19, 7, 22], fill=(0, 0, 0, 0)); R(d, 4, 24, 4, 3, P['red'])
+    for k in range(10, 52, 6): R(d, 5, k, 2, 3, P['red'])  # poste rayado como bastón
+    im.save(os.path.join(BG, 'deco_lamp.png'))
+    # portón del jefe: regalo gigante
+    im = new(40, 96); d = ImageDraw.Draw(im)
+    R(d, 0, 6, 40, 90, P['red2']); R(d, 0, 6, 3, 90, P['red']); R(d, 17, 6, 6, 90, P['yellow']); R(d, 0, 46, 40, 6, P['yellow'])
+    d.ellipse([6, 0, 19, 10], fill=P['yellow']); d.ellipse([21, 0, 34, 10], fill=P['yellow']); R(d, 0, 4, 40, 3, SNOW)
+    im.save(os.path.join(BG, 'deco_door.png'))
+    # truss con guirnalda
+    im = new(32, 12); d = ImageDraw.Draw(im)
+    R(d, 0, 0, 32, 2, P['grey2']); R(d, 0, 10, 32, 2, P['grey2'])
+    for k in range(0, 32, 8): d.line([(k, 1), (k + 4, 10), (k + 8, 1)], fill=P['grey1'])
+    for k in range(0, 32, 2): px(im, k, 4 + int(math.sin(k / 32 * math.pi) * 4), P['green2'])
+    im.save(os.path.join(BG, 'deco_truss.png'))
+
+def tiles_navidad():
+    """tiles con nieve y carámbanos, LEDs navideños, tarima de madera con guirnalda y cajas de regalo"""
+    im = new(176, 16); d = ImageDraw.Draw(im)
+    def top(i, cols):
+        x = i * 16
+        R(d, x, 0, 16, 16, P['steel0']); R(d, x, 3, 16, 1, P['steel2'])
+        for k in range(0, 16, 4): R(d, x + k, 6, 2, 2, cols[(k // 4 + i) % len(cols)])
+        R(d, x, 9, 16, 1, INK); R(d, x + 2, 12, 2, 2, P['steel1']); R(d, x + 12, 12, 2, 2, P['steel1'])
+        R(d, x, 0, 16, 3, SNOW); R(d, x, 3, 16, 1, SNOW2)
+        for k in ((x + 3) % 7, (x + 11) % 13):  # carámbanos
+            R(d, x + k, 4, 1, 2, ICE)
+    top(0, [P['red'], P['green']]); top(1, [P['yellow'], P['red']])
+    top(2, [P['green'], P['yellow']]); R(d, 36, 10, 8, 5, P['red2']); R(d, 38, 11, 4, 3, P['white'])
+    def fill(i, kind):
+        x = i * 16; R(d, x, 0, 16, 16, P['steel0']); R(d, x, 0, 16, 1, P['steel1']); R(d, x, 0, 1, 16, P['steel1'])
+        if kind == 'x': d.line([(x + 1, 1), (x + 14, 14)], fill=P['grey1']); d.line([(x + 14, 1), (x + 1, 14)], fill=P['grey1'])
+        if kind == 'v':
+            for k in range(3, 13, 3): R(d, x + 3, k, 10, 1, INK)
+        if kind == 'l': R(d, x + 6, 6, 4, 4, P['green2']); R(d, x + 7, 7, 2, 2, P['green'])
+    fill(3, 'x'); fill(4, 'v'); fill(5, 'l')
+    x = 96  # tarima de madera con nieve y guirnalda (se atraviesa desde abajo)
+    R(d, x, 1, 16, 4, P['brick2']); R(d, x, 1, 16, 1, P['brick3']); R(d, x, 5, 16, 1, INK); R(d, x, 0, 16, 2, SNOW)
+    for k in range(0, 16, 2): px(im, x + k, 7 + (k % 4 == 0), P['green2'])
+    px(im, x + 4, 8, P['red']); px(im, x + 12, 8, P['yellow'])
+    x = 112; R(d, x, 0, 16, 16, (14, 13, 24, 255)); R(d, x, 0, 16, 1, P['steel0'])
+    fill(8, 'x')
+    x = 144  # caja de regalo
+    R(d, x, 0, 16, 16, P['green2']); R(d, x, 0, 16, 1, P['green']); R(d, x, 0, 1, 16, P['green'])
+    R(d, x + 7, 0, 2, 16, P['yellow']); R(d, x, 7, 16, 2, P['yellow']); px(im, x + 7, 0, hx('fff1a8'))
+    x = 160; R(d, x, 6, 16, 4, P['amber2'])
+    im.save(os.path.join(BG, 'tiles.png'))
 
 # ======================================================================
 def main():
     os.makedirs(BG, exist_ok=True)
-    sky(); fb = far(); mb, mn = mid(); nc = near(); tiles(); deco_neumaticos()
+    sky(); fb = far(); mb, mn = mid(); nc = near()
+    xmas_bulbs = navidad_fondo(); tiles_navidad(); deco_navidad()
     sheet([patovica(0), patovica(1)]).save(os.path.join(SP, 'patovica.png'))
-    sheet([bafle(i) for i in range(4)]).save(os.path.join(SP, 'bafle.png'))
-    sheet([dron(i) for i in range(3)]).save(os.path.join(SP, 'dron.png'))
-    sheet([chispa(i) for i in range(3)]).save(os.path.join(SP, 'chispa.png'))
-    sheet([apagon(i) for i in range(6)]).save(os.path.join(SP, 'apagon.png'))
-    sheet([fusible(i) for i in range(4)]).save(os.path.join(SP, 'ornament.png'))
-    sheet([onda(i) for i in range(2)]).save(os.path.join(SP, 'wave.png'))
-    nota().save(os.path.join(SP, 'elaser.png'))
-    apagon_card()
+    sheet([regalo(i) for i in range(4)]).save(os.path.join(SP, 'regalo.png'))
+    sheet([esfera(i) for i in range(3)]).save(os.path.join(SP, 'esfera.png'))
+    sheet([duende(i) for i in range(3)]).save(os.path.join(SP, 'duende.png'))
+    sheet([noel(i) for i in range(6)]).save(os.path.join(SP, 'noel.png'))
+    sheet([bola(i) for i in range(4)]).save(os.path.join(SP, 'ornament.png'))
+    sheet([onda_nieve(i) for i in range(2)]).save(os.path.join(SP, 'wave.png'))
+    baston().save(os.path.join(SP, 'elaser.png'))
+    for k, col, light in (('ivan', P['red'], hx('ff9aa8')), ('hades', hx('4d8dff'), hx('b4cdff')), ('matias', P['green'], hx('a8ffc8'))):
+        disparo(col, light).save(os.path.join(SP, 'shot_' + k + '.png'))
+    noel_card()
+    for old in ('bafle', 'dron', 'chispa', 'apagon'):
+        p = os.path.join(SP, old + '.png')
+        if os.path.exists(p): os.remove(p)
+    p = os.path.join(IMG, 'apagon_card.png')
+    if os.path.exists(p): os.remove(p)
     # metadatos en art-data.js (se conservan los demás sprites)
     path = os.path.join(ROOT, 'js', 'data', 'art-data.js')
     src = open(path, encoding='utf-8').read()
     data = json.loads(re.search(r'window\.ART_DATA=(\{.*\});?\s*$', src, re.S).group(1))
     spr = data['sprites']
-    for k in ('snowman', 'nutcracker', 'skull', 'elf', 'grinch'): spr.pop(k, None)
-    spr.update({'patovica': {'w': 30, 'h': 34, 'n': 2}, 'bafle': {'w': 30, 'h': 44, 'n': 4}, 'dron': {'w': 30, 'h': 28, 'n': 3},
-                'chispa': {'w': 24, 'h': 30, 'n': 3}, 'apagon': {'w': 150, 'h': 132, 'n': 6, 'lensL': list(LENS_L), 'lensR': list(LENS_R), 'core': list(CORE)}})
-    data['lights'] = {'far_blink': fb, 'mid_bulbs': mb, 'mid_neon': mn, 'near_consoles': nc}
+    for k in ('snowman', 'nutcracker', 'skull', 'elf', 'grinch', 'bafle', 'dron', 'chispa', 'apagon'): spr.pop(k, None)
+    spr.update({'patovica': {'w': 30, 'h': 34, 'n': 2}, 'regalo': {'w': 30, 'h': 44, 'n': 4}, 'esfera': {'w': 30, 'h': 28, 'n': 3},
+                'duende': {'w': 24, 'h': 30, 'n': 3}, 'noel': {'w': 150, 'h': 132, 'n': 6, 'lensL': list(LENS_L), 'lensR': list(LENS_R), 'core': list(CORE)}})
+    data['deco']['speaker'] = [32, 64]; data['deco']['console'] = [32, 32]
+    data['lights'] = {'far_blink': fb, 'mid_bulbs': mb + xmas_bulbs, 'mid_neon': mn, 'near_consoles': nc}
     open(path, 'w', encoding='utf-8').write('// Metadatos del arte 8-bit (generado por tools/arte.py)\nwindow.ART_DATA=' + json.dumps(data, ensure_ascii=False) + ';\n')
-    print('arte generado')
+    print('arte navideño generado')
 
 if __name__ == '__main__':
     main()
