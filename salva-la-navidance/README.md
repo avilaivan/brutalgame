@@ -54,6 +54,11 @@ Los datos se guardan en `data/scores.json`. Para empezar el ranking de cero, bor
 | Disparar (mantener = ráfaga) | DISP | X / J | X |
 | Dash (también en el aire) | DASH | C / Shift | B / RB |
 | Pausa | II | Esc / P | Start |
+| Reiniciar al instante | (desde la pausa) | R | Select |
+
+### Ghost, medallas y rango
+- **Ghost:** tu mejor partida corre al lado tuyo como silueta blanca, y en la barra de progreso hay una marca blanca con su posición.
+- **Medallas:** al terminar recibís un rango según tu tiempo: **S** < 60 s, **A** < 75 s, **B** < 95 s, **C** el resto. Se ajustan en `js/core.js` (`MEDALS`) cuando haya tiempos reales de la fiesta.
 
 - **Pisotón:** caer encima de un enemigo común lo elimina y te hace rebotar (encadená pisotones para más puntos).
 - **Escudo dorado:** 8 segundos inmune. Si tocás enemigos con el escudo, los rompés. Después se rompe solo.

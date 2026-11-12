@@ -59,7 +59,7 @@
     coins(124, 136, 17);
 
     // ================= ZONA 2: TORRES DE NEÓN (140-289) =================
-    cp(138, 'ZONA 2');
+    cp(138, 'ZONA 2 · TORRES DE NEÓN');
     L.zones.push({ x: 140 * 16, name: 'ZONA 2 · TORRES DE NEÓN' });
     ground(140, 160);
     en('nutcracker', 156, GR);
@@ -89,7 +89,7 @@
     deco('speaker', 284, GR);
 
     // ================= ZONA 3: AZOTEA BRUTAL. (290-411) =================
-    cp(290, 'ZONA 3');
+    cp(290, 'ZONA 3 · AZOTEA BRUTAL.');
     L.zones.push({ x: 292 * 16, name: 'ZONA 3 · AZOTEA BRUTAL.' });
     en('elf', 300, 17); block(298, 301, 17);
     deco('tree', 294, GR); deco('tree', 306, GR);

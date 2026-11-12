@@ -77,14 +77,16 @@
   G.onBossKilled = function () {
     G.finished = true; G.running = false; G.finishT = 0;
     const time = Math.round(G.runTime * 1000) / 1000;
-    const prevBest = NV.DB.best(); const pb = !prevBest || time < prevBest;
-    if (pb) { NV.DB.setBest(time); NV.DB.setSplits(G.splits); NV.DB.setGhost({ hero: G.heroKey, f: G.ghostRec }); }
-    G.result = { hero: G.heroKey, time, coins: G.coinsGot, deaths: G.deaths, score: G.score, pb, prevBest };
+    const prevBest = NV.DB.best(); const better = !prevBest || time < prevBest;
+    const medal = C.MEDALS.find((m) => time < m[1]);
+    // el récord personal (y su ghost) se guarda solo si la partida es válida para el ranking
+    const savePb = () => { NV.DB.setBest(time); NV.DB.setSplits(G.splits); NV.DB.setGhost({ hero: G.heroKey, f: G.ghostRec }); G.result.pb = true; };
+    G.result = { hero: G.heroKey, time, coins: G.coinsGot, deaths: G.deaths, score: G.score, pb: false, prevBest, medal };
     G.say('¡NAVIDANCE SALVADA!', { scale: 3, life: 220, sub: U.fmtTime(time), subColor: '#ffffff' });
     G.sfx('win');
     G.submit = null;
     NV.DB.submit({ name: G.profile.name, ig: G.profile.ig, playerId: G.profile.id, hero: G.heroKey, timeMs: Math.round(time * 1000), coins: G.coinsGot, deaths: G.deaths, token: G.token })
-      .then((r) => { G.submit = r; });
+      .then((r) => { G.submit = r; if (better && !r.error) savePb(); });
   };
 
   // ---------------- ACTUALIZACIÓN ----------------
@@ -209,6 +211,7 @@
     const sx = G.shakeT > 0 ? Math.round((Math.random() - 0.5) * G.shakeM) : 0, sy = G.shakeT > 0 ? Math.round((Math.random() - 0.5) * G.shakeM) : 0;
     const cx = Math.round(G.camX) + sx, cy = G.camY + sy;
     NV.Stage.drawBack(ctx, G, cx);
+    NV.Stage.drawTint(ctx, G);
     NV.Stage.drawLights(ctx, G, cx);
     NV.Stage.drawTruss(ctx, G, cx);
     NV.Stage.drawDeco(ctx, G, cx, cy);
@@ -231,6 +234,7 @@
       else X.spr(b.kind, (b.t >> 2) & 1, b.x - cx, b.y - cy + (b.kind === 'elaser' ? 2 : 4), { flip: b.vx < 0 });
     }
     FX.draw(ctx, G, cx, cy);
+    NV.Stage.drawCrowd(ctx, G, cx);
     NV.Stage.drawSnow(ctx, cx);
     FX.drawTexts(G, cx, cy);
     if (G.flashT > 0) { ctx.globalAlpha = G.flashT / 18; ctx.fillStyle = G.flashC; ctx.fillRect(0, 0, W, 360); ctx.globalAlpha = 1; G.flashT--; }
@@ -311,11 +315,12 @@
   requestAnimationFrame(loop);
   NV.DB.init();
   // primer toque: desbloquea el audio y arranca una canción de fondo en el menú
-  const firstTouch = () => { A.unlock(); if (!G.menuMusic && G.state !== 'play') { G.menuMusic = true; A.preview(U.pick(NV.HERO_ORDER)); } window.removeEventListener('pointerdown', firstTouch); window.removeEventListener('keydown', firstTouch); };
+  // (la música del menú arranca al entrar al título, después del splash)
+  const firstTouch = () => { A.unlock(); window.removeEventListener('pointerdown', firstTouch); window.removeEventListener('keydown', firstTouch); };
   window.addEventListener('pointerdown', firstTouch); window.addEventListener('keydown', firstTouch);
   X.load(() => {
     const h = params.get('hero');
     if (h && NV.HEROES[h]) { if (!NV.DB.profile()) NV.DB.saveProfile('TEST', 'test'); G.startRun(h); }
-    else G.go('title');
+    else G.go('gate');
   });
 })();

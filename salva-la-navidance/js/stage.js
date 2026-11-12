@@ -145,6 +145,51 @@
     }
   };
 
+  // Color de cada zona: tiñe solo el fondo (no los tiles ni personajes) y cambia suave al avanzar
+  const ZONE_TINT = [[77, 226, 255], [255, 79, 216], [255, 46, 74], [124, 255, 77]]; // criogénico, neón, azotea, jefe
+  let tint = ZONE_TINT[0].slice();
+  S.drawTint = function (ctx, G) {
+    const L = G.L, p = G.player; if (!L || !p) return;
+    let z = 0; for (let i = 0; i < L.zones.length; i++) if (p.x >= L.zones[i].x) z = i;
+    if (G.bossOn) z = 3;
+    for (let k = 0; k < 3; k++) tint[k] += (ZONE_TINT[z][k] - tint[k]) * 0.03;
+    ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.globalAlpha = 0.55;
+    ctx.fillStyle = 'rgb(' + tint.map(Math.round).join(',') + ')'; ctx.fillRect(0, 0, NV.X.W, 360); ctx.restore();
+  };
+
+  // Público de la fiesta en primer plano: siluetas que saltan al beat, manos arriba con los graves
+  // y luces de celulares. Se mueve más rápido que la cámara para dar profundidad.
+  S.drawCrowd = function (ctx, G, camX, opts = {}) {
+    const X = NV.X, W = X.W, base = opts.y || 364;
+    const beat = G.beat, ph = G.phase, bass = G.bass, rim = ci(beat >> 2), hop = (1 - ph) * (1 - ph);
+    // fila de atrás (más chica, más lenta, teñida) y fila de adelante (grande, negra)
+    for (const row of [{ f: 1.15, sp: 15, s: 0.75, col: '#120e22', seed: 3, dy: -10 }, { f: 1.35, sp: 21, s: 1, col: '#030208', seed: 7, dy: 0 }]) {
+      const i0 = Math.floor((camX * row.f) / row.sp) - 2;
+      for (let i = i0; i < i0 + W / row.sp + 4; i++) {
+        const h = hash(i, row.seed), s = row.s;
+        const x = Math.round(i * row.sp - camX * row.f + (h % 7));
+        const jumper = hash(i + row.seed, beat) % 3 === 0;
+        const hr = Math.round((6 + (h % 2)) * s), sh = Math.round((10 + (h % 3)) * s); // radio de cabeza, medio ancho de hombros
+        const y = base + row.dy - Math.round((30 + (h % 12)) * s) - (jumper ? Math.round(hop * 6 * s) : 0);
+        ctx.fillStyle = row.col;
+        // brazos arriba con los graves (o siempre, para algunos)
+        const arms = h % 5 === 0 || (bass > 0.45 && h % 3 === 0);
+        if (arms) { const up = Math.round(hop * 3); ctx.fillRect(x - sh, y - 10 - up, 3, 16); ctx.fillRect(x + sh - 3, y - 10 - up, 3, 16); }
+        NV.Input.circ(ctx, x - sh + 4, y + hr + 5, 4); NV.Input.circ(ctx, x + sh - 4, y + hr + 5, 4); // hombros
+        ctx.fillRect(x - sh, y + hr + 5, sh * 2, 80);  // torso
+        ctx.fillRect(x - 2, y + hr - 2, 5, 8);         // cuello
+        NV.Input.circ(ctx, x, y, hr);                  // cabeza
+        // luz de los cabezales en el borde de la cabeza y hombros
+        ctx.globalAlpha = row.s === 1 ? 0.9 : 0.5;
+        X.rect(x - hr + 2, y - hr, hr * 2 - 3, 1, rim); X.rect(x - sh + 2, y + hr + 1, 4, 1, rim); X.rect(x + sh - 6, y + hr + 1, 4, 1, rim);
+        if (arms) { X.rect(x - sh, y - 10 - Math.round(hop * 3), 3, 1, rim); X.rect(x + sh - 3, y - 10 - Math.round(hop * 3), 3, 1, rim); }
+        ctx.globalAlpha = 1;
+        // celular filmando
+        if (h % 9 === 0) { const px = x + sh + 1, py = y - 18; X.rect(px, py, 5, 8, '#1a1a24'); if ((G.frame >> 3) % 5) X.rect(px + 1, py + 1, 3, 5, '#cfe3ff'); }
+      }
+    }
+  };
+
   S.drawSnow = function (ctx, camX) {
     const W = NV.X.W; ctx.fillStyle = '#e9f4ff';
     for (const s of snow) {

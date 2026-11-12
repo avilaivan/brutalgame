@@ -91,9 +91,10 @@
     ctx.save();
     for (const k of ['left', 'right']) {
       const b = L[k], on = I.held[k];
-      ctx.globalAlpha = on ? 0.95 : 0.55;
-      X.panel(b.x, b.y, b.w, b.h, { fill: on ? 'rgba(255,255,255,.35)' : 'rgba(10,10,22,.55)', border: '#ffffff', light: false });
-      X.text(b.label, b.x + b.w / 2, b.y + b.h / 2 - 10, { scale: 3, align: 'center' });
+      // sólidas como los botones redondos: tienen que leerse encima del público
+      ctx.globalAlpha = on ? 0.95 : 0.75;
+      X.panel(b.x, b.y, b.w, b.h, { fill: on ? 'rgba(255,255,255,.45)' : 'rgba(10,10,22,.85)', border: '#ffffff', light: '#5a6e92' });
+      X.text(b.label, b.x + b.w / 2, b.y + b.h / 2 - 10, { scale: 3, align: 'center', color: on ? '#0b0a12' : '#ffffff', shadow: !on });
     }
     for (const k of ['jump', 'shoot', 'dash']) {
       const b = L[k], on = I.held[k];
