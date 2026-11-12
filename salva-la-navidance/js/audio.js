@@ -5,7 +5,7 @@
 // =====================================================================
 (function () {
   const MD = window.MUSIC_DATA;
-  const A = { ctx: null, cur: null, el: {}, muted: false, fake0: performance.now() / 1000, env: {}, vol: 0.85 };
+  const A = { ctx: null, cur: null, el: {}, muted: false, fake0: performance.now() / 1000, env: {}, vol: NV.OPT.music / 10 };
   let sfxBus, master, noiseBuf;
 
   // decodificar envolventes de energía (base64 -> bytes)
@@ -30,7 +30,7 @@
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
     A.ctx = new AC();
     master = A.ctx.createGain(); master.gain.value = A.muted ? 0 : 1; master.connect(A.ctx.destination);
-    sfxBus = A.ctx.createGain(); sfxBus.gain.value = 0.55; sfxBus.connect(master);
+    sfxBus = A.ctx.createGain(); sfxBus.gain.value = 0.55 * NV.OPT.sfx / 7; sfxBus.connect(master);
     noiseBuf = A.ctx.createBuffer(1, A.ctx.sampleRate, A.ctx.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     // iOS: "preparar" las canciones dentro del primer toque
@@ -55,6 +55,11 @@
   A.stop = function () { for (const o in A.el) A.el[o].pause(); };
   A.pause = function () { if (A.cur) A.el[A.cur].pause(); };
   A.resume = function () { if (A.cur) { const p = A.el[A.cur].play(); if (p) p.catch(() => {}); } };
+  // aplica los volúmenes de NV.OPT (0-10); efectos: 7 = volumen original
+  A.applyOpts = function () {
+    A.vol = NV.OPT.music / 10; for (const o in A.el) A.el[o].volume = A.vol;
+    if (sfxBus) sfxBus.gain.value = 0.55 * NV.OPT.sfx / 7;
+  };
   A.toggleMute = function () {
     A.muted = !A.muted;
     for (const o in A.el) A.el[o].muted = A.muted;

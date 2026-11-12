@@ -103,12 +103,22 @@ function body(req) {
 }
 
 // ---------- archivos estáticos (con soporte de Range para el audio en iPhone) ----------
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg', '.mp3': 'audio/mpeg', '.ttf': 'font/ttf', '.json': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg', '.mp3': 'audio/mpeg', '.ttf': 'font/ttf', '.json': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json' };
 function serveStatic(req, res, urlPath) {
   let p = decodeURIComponent(urlPath.split('?')[0]);
   if (p === '/') p = '/index.html';
   const file = path.normalize(path.join(ROOT, p));
   if (!file.startsWith(ROOT) || file.startsWith(DATA_DIR + path.sep) || file === path.join(ROOT, 'server.js')) { res.writeHead(403); return res.end(); }
+  // index.html: la vista previa del link necesita la dirección completa de la imagen
+  if (file === path.join(ROOT, 'index.html')) {
+    const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').replace(/[^a-zA-Z0-9.:-]/g, '');
+    const proto = req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    return fs.readFile(file, 'utf8', (err, html) => {
+      if (err) { res.writeHead(404); return res.end(); }
+      res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-cache' });
+      res.end(html.split('%ORIGIN%').join(proto + '://' + host));
+    });
+  }
   fs.stat(file, (err, st) => {
     if (err || !st.isFile()) { res.writeHead(404); return res.end('No encontrado'); }
     const type = MIME[path.extname(file).toLowerCase()] || 'application/octet-stream';

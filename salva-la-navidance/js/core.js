@@ -51,6 +51,10 @@ NV.CFG = {
   RANKING_SIZE: 10,
 };
 
+// Opciones del jugador (quedan guardadas en el dispositivo)
+NV.OPT = Object.assign({ music: 8, sfx: 7, vib: true, fx: true }, (() => { try { return JSON.parse(localStorage.getItem('navidance_opts') || '{}'); } catch (e) { return {}; } })());
+NV.saveOpt = () => { try { localStorage.setItem('navidance_opts', JSON.stringify(NV.OPT)); } catch (e) {} };
+
 NV.HEROES = {
   ivan:   { name: 'AVILA IVAN',       short: 'IVAN',   color: '#ff2e4a', light: '#ff9aa8', dark: '#5c0815', role: 'ROJO' },
   hades:  { name: 'BB HADES',         short: 'HADES',  color: '#4d8dff', light: '#b4cdff', dark: '#0b2463', role: 'AZUL' },
