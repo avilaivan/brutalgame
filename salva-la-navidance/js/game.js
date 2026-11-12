@@ -36,7 +36,7 @@
     G.bullets = []; G.parts = []; G.booms = []; G.texts = []; G.marks = [];
     G.cp = 0; G.runTime = 0; G.running = false; G.finished = false; G.finishT = 0;
     G.coinsGot = 0; G.score = 0; G.kills = 0; G.deaths = 0; G.splits = [];
-    G.bossOn = false; G.boss = null; G.banner = null; G.paused = false; G.vsT = 0; G.hype = 0; G.gIdx = 0; G.gDelta = null; G.coinPop = 0; G.hpLost = 0; G.tip = (G.tip || Math.floor(Math.random() * 9)) + 1;
+    G.bossOn = false; G.boss = null; G.banner = null; G.paused = false; G.vsT = 0; G.hype = 0; G.combo = 0; G.comboT = 0; G.gIdx = 0; G.gDelta = null; G.coinPop = 0; G.hpLost = 0; G.tip = (G.tip || Math.floor(Math.random() * 9)) + 1;
     const c0 = G.L.checkpoints[0];
     G.player = NV.Player(hero, c0.x, c0.y);
     G.ghostRec = []; G.ghost = NV.DB.ghost();
@@ -65,6 +65,19 @@
     p.x = p.safe.x - 7; p.y = p.safe.y - p.h - 2; p.vx = p.vy = 0; p.invuln = 70; p.dash = 0;
     FX.burst(G, p.x + 7, p.y + 17, p.hero.color, 12, 2, 20, 0, 2);
   };
+
+  // ---------------- COMBO / FIEBRE ----------------
+  G.fever = () => G.combo >= C.FEVER_AT && G.comboT > 0;
+  G.addCombo = function (x, y) {
+    G.combo = (G.comboT > 0 ? G.combo : 0) + 1; G.comboT = C.COMBO_TIME;
+    if (G.combo >= 2) FX.text(G, 'COMBO x' + G.combo, x, y - 18, G.combo >= C.FEVER_AT ? '#ff4fd8' : '#4de2ff', 1, 40);
+    if (G.combo === C.FEVER_AT) {
+      G.sfx('fever'); G.hype = 150; G.flash('#ff4fd8', 6); G.vib([20, 30, 20]);
+      G.say('¡FIEBRE BRUTAL!', { scale: 3, life: 70, color: '#ff4fd8', sub: 'MÁS VELOCIDAD MIENTRAS SIGAS EL COMBO' });
+    }
+    if (G.combo > C.FEVER_AT) G.score += 100 * G.combo;
+  };
+  G.breakCombo = function () { if (G.combo >= C.FEVER_AT) FX.text(G, 'FIEBRE PERDIDA', G.player.x + 7, G.player.y - 20, '#8ea2c4', 1, 40); G.combo = 0; G.comboT = 0; };
 
   G.getCoin = function (x, y) {
     G.coinsGot++; G.score += C.COIN_PTS; G.sfx('coin'); G.coinPop = 8;
@@ -114,7 +127,7 @@
         const n = 4 - (G.beat - G.countBeat);
         if (G.beatTick) { if (n > 0) { G.sfx('beep'); G.say(String(n), { scale: 6, life: 26, color: p.hero.light }); } else { G.sfx('go'); G.running = true; G.t0 = performance.now();
           // el servidor anota la largada: el tiempo final tiene que coincidir con su reloj
-          const pid = G.profile.id; G.tokenP.then((t) => NV.DB.go(t, pid)); G.say('¡YA!', { scale: 6, life: 40, color: '#f5c542', sub: 'LLEGÁ AL GRINCH Y VENCELO', subColor: '#ffffff' }); } }
+          const pid = G.profile.id; G.tokenP.then((t) => NV.DB.go(t, pid)); G.say('¡YA!', { scale: 6, life: 40, color: '#f5c542', sub: 'LLEGÁ AL APAGÓN Y DEVOLVÉ LA LUZ', subColor: '#ffffff' }); } }
       }
     }
     if (G.running) {
@@ -126,11 +139,12 @@
     if (G.banner) { G.banner.t++; if (--G.banner.life <= 0) G.banner = null; }
     if (G.vsT) {
       if (++G.vsT === 18) { G.sfx('slam'); G.shake(6); G.vib(60); }
-      if (G.vsT === 100) G.say('¡CYBER-GRINCH!', { scale: 3, life: 100, color: '#7cff4d', sub: 'ESQUIVÁ LOS LÁSERES DE SUS LENTES' });
+      if (G.vsT === 100) G.say('¡EL APAGÓN!', { scale: 3, life: 100, color: '#ff2e4a', sub: 'QUIERE CORTAR LA FIESTA · ESQUIVÁ SUS LÁSERES' });
       if (G.vsT > 112) G.vsT = 0;
     }
 
     if (G.hitstop > 0) { G.hitstop--; return; }
+    if (G.comboT > 0 && --G.comboT === 0) G.breakCombo();
 
     NV.updatePlayer(p, G, !G.running && !G.finished);
     // grabar el recorrido para el ghost (30 muestras por segundo; 0 = muerto/invisible)
@@ -230,6 +244,7 @@
     NV.Stage.drawTruss(ctx, G, cx);
     NV.Stage.drawDeco(ctx, G, cx, cy);
     NV.Stage.drawTiles(ctx, L, cx, cy);
+    NV.drawBlackout(ctx, G, cx, cy);
     // balizas de checkpoint y puerta
     L.checkpoints.forEach((c, i) => { if (i > 0) X.spr('beacon', i <= G.cp ? 1 : 0, c.x - cx, c.y - cy); });
     const dx = L.bossDoor - cx; if (dx > -50 && dx < W + 10 && !G.bossOn) { ctx.drawImage(X.img.deco_door, Math.round(dx), NV.GR * 16 - 96 - cy); X.text('JEFE', dx + 20, NV.GR * 16 - 110 - cy, { align: 'center', color: (G.frame >> 4) % 2 ? '#ff2e4a' : '#ff9aa8', outline: true }); }
@@ -271,14 +286,14 @@
     'PISÁ ENEMIGOS: REBOTÁS Y NO PERDÉS VELOCIDAD',
     'EL DASH TAMBIÉN FUNCIONA EN EL AIRE',
     'DASH + SALTO = SALTO LARGO Y RÁPIDO',
-    'CUANDO EL NÚCLEO DEL GRINCH BRILLA, RECIBE DOBLE DAÑO',
+    'CUANDO LA PALANCA DEL APAGÓN BRILLA, RECIBE DOBLE DAÑO',
     'HAY 2 MEGA B-COINS ESCONDIDAS EN EL NIVEL',
     'CON EL ESCUDO DORADO ROMPÉS ENEMIGOS AL TOCARLOS',
     'LA SILUETA BLANCA ES TU MEJOR PARTIDA: ¡GANALE!',
     'EL JEFE ATACA AL RITMO: ESCUCHÁ LA CANCIÓN',
   ];
 
-  // Presentación del jefe: tu DJ entra por la izquierda, el Grinch por la derecha, "VS" en el medio
+  // Presentación del jefe: tu DJ entra por la izquierda, el Apagón por la derecha, "VS" en el medio
   function drawVS(ctx) {
     const W = X.W, t = G.vsT, h = G.player.hero;
     const ease = (v) => 1 - Math.pow(1 - U.clamp(v, 0, 1), 3);
@@ -294,9 +309,9 @@
     };
     const lx = -slide, rx = slide;
     band(lx - 20, lx + W / 2 - 12, h.dark, X.img[G.heroKey + '_portrait'], lx + W / 2 - 230, 210, 210, false);
-    band(rx + W / 2 + 12, rx + W + 60, '#0e3a12', X.img.grinch_card, rx + W / 2 + 30, 220, 212, false);
+    band(rx + W / 2 + 12, rx + W + 60, '#3a0a12', X.img.apagon_card, rx + W / 2 + 30, 220, 212, false);
     X.text(h.name, lx + 30, 296, { scale: 2, color: h.light, outline: true });
-    X.text('CYBER-GRINCH', rx + W - 30, 296, { scale: 2, align: 'right', color: '#7cff4d', outline: true });
+    X.text('EL APAGÓN', rx + W - 30, 296, { scale: 2, align: 'right', color: '#ff2e4a', outline: true });
     if (t > 14 && out < 1) {
       const pop = Math.max(1, 2.2 - (t - 14) * 0.15);
       ctx.save(); ctx.translate(W / 2, 168); ctx.scale(pop, pop); ctx.globalAlpha = 1 - out;

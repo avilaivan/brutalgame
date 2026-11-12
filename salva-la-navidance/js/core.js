@@ -3,6 +3,7 @@
 //  Todos los números del juego están acá para ajustarlos sin tocar la lógica.
 // =====================================================================
 window.NV = window.NV || {};
+NV.VERSION = '9dj-2'; // cambiarlo en cada actualización del arte o la música (rompe la caché del navegador)
 
 NV.CFG = {
   // ---------- Pantalla ----------
@@ -34,6 +35,11 @@ NV.CFG = {
   SHOT_DMG: 1,
   SHOT_MAX: 4,
   SHIELD_TIME: 8 * 60,    // el escudo te hace inmune 8 s y después se rompe
+
+  // ---------- Combo y FIEBRE: encadenar enemigos sin parar te hace más rápido ----------
+  COMBO_TIME: 150,        // cuadros para encadenar el siguiente enemigo (2,5 s)
+  FEVER_AT: 5,            // combo que activa la FIEBRE
+  FEVER_SPEED: 1.22,      // multiplicador de velocidad durante la FIEBRE
 
   // ---------- Medallas por tiempo (segundos): ajustarlas cuando haya tiempos reales ----------
   MEDALS: [['S', 60, '#f5c542'], ['A', 75, '#4de2ff'], ['B', 95, '#33e07a'], ['C', Infinity, '#8ea2c4']],

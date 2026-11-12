@@ -37,8 +37,8 @@
   // ---------------- carga de imágenes ----------------
   const LIST = {
     ivan: 'assets/sprites/ivan.png', hades: 'assets/sprites/hades.png', matias: 'assets/sprites/matias.png',
-    snowman: 'assets/sprites/snowman.png', nutcracker: 'assets/sprites/nutcracker.png', skull: 'assets/sprites/skull.png', elf: 'assets/sprites/elf.png',
-    grinch: 'assets/sprites/grinch.png', coin: 'assets/sprites/coin.png', mega: 'assets/sprites/mega.png', shield: 'assets/sprites/shield.png',
+    patovica: 'assets/sprites/patovica.png', bafle: 'assets/sprites/bafle.png', dron: 'assets/sprites/dron.png', chispa: 'assets/sprites/chispa.png',
+    apagon: 'assets/sprites/apagon.png', coin: 'assets/sprites/coin.png', mega: 'assets/sprites/mega.png', shield: 'assets/sprites/shield.png',
     heart: 'assets/sprites/heart.png', beacon: 'assets/sprites/beacon.png', elaser: 'assets/sprites/elaser.png', ornament: 'assets/sprites/ornament.png',
     wave: 'assets/sprites/wave.png', boom: 'assets/sprites/boom.png', movinghead: 'assets/sprites/movinghead.png',
     shot_ivan: 'assets/sprites/shot_ivan.png', shot_hades: 'assets/sprites/shot_hades.png', shot_matias: 'assets/sprites/shot_matias.png',
@@ -48,15 +48,15 @@
     logo: 'assets/img/logo.png', brutal_logo: 'assets/img/brutal_logo.png', coinBig: 'assets/img/coin.png',
     ivan_face: 'assets/img/ivan_face.jpg', hades_face: 'assets/img/hades_face.jpg', matias_face: 'assets/img/matias_face.jpg',
     ivan_portrait: 'assets/img/ivan_portrait.jpg', hades_portrait: 'assets/img/hades_portrait.jpg', matias_portrait: 'assets/img/matias_portrait.jpg',
-    grinch_card: 'assets/img/grinch_card.jpg',
+    apagon_card: 'assets/img/apagon_card.png',
   };
-  const WHITE = ['ivan', 'hades', 'matias', 'snowman', 'nutcracker', 'skull', 'elf', 'grinch', 'heart', 'coin'];
+  const WHITE = ['ivan', 'hades', 'matias', 'patovica', 'bafle', 'dron', 'chispa', 'apagon', 'heart', 'coin'];
   X.load = function (done) {
     const keys = Object.keys(LIST); X.total = keys.length;
     keys.forEach((k) => {
       const im = new Image();
       im.onload = im.onerror = () => { if (++X.loaded === X.total) { WHITE.forEach(mkWhite); done(); } };
-      im.src = LIST[k]; X.img[k] = im;
+      im.src = LIST[k] + '?v=' + NV.VERSION; X.img[k] = im; // ?v= evita que el navegador muestre arte viejo después de actualizar
     });
   };
   function mkWhite(k) {

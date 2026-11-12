@@ -37,7 +37,7 @@
     for (let ox = mo; ox < W; ox += I.mid.width) {
       for (const n of LD.mid_neon) {
         const x = ox + n.x; if (x > W || x + n.w < 0) continue;
-        ctx.globalAlpha = 0.06 + bass * 0.22; ctx.fillStyle = { CY: '#4de2ff', PK: '#ff4fd8', G: '#33e07a', W: '#ffffff' }[n.c] || '#fff';
+        ctx.globalAlpha = 0.06 + bass * 0.22; ctx.fillStyle = { CY: '#4de2ff', PK: '#ff4fd8', G: '#33e07a', W: '#ffffff', R: '#ff2e4a' }[n.c] || '#fff';
         ctx.fillRect(Math.round(x - 3), 30 + n.y - 3, n.w + 6, n.h + 6);
       }
     }
@@ -146,14 +146,14 @@
   };
 
   // Color de cada zona: tiñe solo el fondo (no los tiles ni personajes) y cambia suave al avanzar
-  const ZONE_TINT = [[77, 226, 255], [255, 79, 216], [255, 46, 74], [124, 255, 77]]; // criogénico, neón, azotea, jefe
+  const ZONE_TINT = [[77, 226, 255], [255, 79, 216], [255, 46, 74], [77, 141, 255]]; // ruta 5, centro, autódromo, jefe
   let tint = ZONE_TINT[0].slice();
   S.drawTint = function (ctx, G) {
     const L = G.L, p = G.player; if (!L || !p) return;
     let z = 0; for (let i = 0; i < L.zones.length; i++) if (p.x >= L.zones[i].x) z = i;
     if (G.bossOn) z = 3;
     for (let k = 0; k < 3; k++) tint[k] += (ZONE_TINT[z][k] - tint[k]) * 0.03;
-    ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.globalAlpha = 0.55;
+    ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.globalAlpha = 0.3;
     ctx.fillStyle = 'rgb(' + tint.map(Math.round).join(',') + ')'; ctx.fillRect(0, 0, NV.X.W, 360); ctx.restore();
   };
 
@@ -190,13 +190,18 @@
     }
   };
 
+  // Papel picado de la fiesta (en diciembre en 9 de Julio es verano: nada de nieve).
+  // Cada papelito gira: alterna entre ancho y fino.
+  const CONF = ['#ff2e4a', '#f5c542', '#4de2ff', '#ff4fd8', '#33e07a', '#ffffff'];
   S.drawSnow = function (ctx, camX) {
-    const W = NV.X.W; ctx.fillStyle = '#e9f4ff';
-    for (const s of snow) {
-      s.y += s.s * 0.55; if (s.y > 362) s.y = -2;
-      let x = (s.x + Math.sin((s.y + s.x) * 0.02) * 6 - camX * s.z * 0.35) % W; if (x < 0) x += W;
-      ctx.globalAlpha = 0.35 + s.z * 0.55; const sz = s.z > 0.75 ? 2 : 1; ctx.fillRect(Math.round(x), Math.round(s.y), sz, sz);
-    }
+    const W = NV.X.W;
+    snow.forEach((s, i) => {
+      s.y += s.s * 0.45; if (s.y > 362) s.y = -2;
+      let x = (s.x + Math.sin((s.y + s.x) * 0.02) * 8 - camX * s.z * 0.35) % W; if (x < 0) x += W;
+      ctx.globalAlpha = 0.45 + s.z * 0.5; ctx.fillStyle = CONF[i % CONF.length];
+      const flip = Math.sin(s.y * 0.15 + i) > 0, big = s.z > 0.7;
+      ctx.fillRect(Math.round(x), Math.round(s.y), flip ? (big ? 3 : 2) : 1, big ? 2 : 1);
+    });
     ctx.globalAlpha = 1;
   };
 

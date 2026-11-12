@@ -37,6 +37,14 @@
     X.text('x' + String(G.coinsGot).padStart(3, '0'), W - 96, 12 - (pop > 4 ? 2 : 0), { scale: 2, color: pop > 0 ? '#ffffff' : '#f5c542' });
     X.text(String(G.score).padStart(7, '0'), W - 12, 30, { align: 'right', color: '#cfd8e6' });
 
+    // ---------- combo / FIEBRE ----------
+    if (G.combo >= 2 && G.comboT > 0) {
+      const fev = G.combo >= NV.CFG.FEVER_AT, col = fev ? ['#ff4fd8', '#4de2ff', '#f5c542', '#33e07a'][(G.frame >> 2) % 4] : '#4de2ff';
+      X.panel(W - 124, 42, 118, 22, { border: fev ? col : '#3a4466' });
+      X.text((fev ? 'FIEBRE x' : 'COMBO x') + G.combo, W - 116, 47, { color: col });
+      X.rect(W - 116, 58, Math.round(102 * G.comboT / NV.CFG.COMBO_TIME), 2, col);
+    }
+
     // ---------- progreso del nivel ----------
     if (!G.bossOn) {
       // barra de progreso dentro del panel del reloj: tu posición, la del ghost y los checkpoints
@@ -49,10 +57,10 @@
       X.text('★', bx + bw + 4, by - 4, { color: '#f5c542', shadow: false });
     } else if (G.boss) {
       const b = G.boss, bw = 200, bx = W / 2 - bw / 2, by = 60;
-      X.text('CYBER-GRINCH', bx, by - 1, { color: '#7cff4d', outline: true });
+      X.text('EL APAGÓN', bx, by - 1, { color: '#4de2ff', outline: true });
       X.panel(bx, by + 9, bw, 10, { light: false });
       const fw = Math.round((bw - 4) * b.hp / b.maxHp);
-      X.rect(bx + 2, by + 11, fw, 6, b.phase === 2 ? '#ff2e4a' : '#7cff4d'); X.rect(bx + 2, by + 11, fw, 1, '#ffffff');
+      X.rect(bx + 2, by + 11, fw, 6, b.phase === 2 ? '#ff2e4a' : '#4de2ff'); X.rect(bx + 2, by + 11, fw, 1, '#ffffff');
     }
 
     // ---------- avisos ----------

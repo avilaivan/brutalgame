@@ -92,13 +92,16 @@
     draw(ctx, G) {
       const X = NV.X, W = X.W;
       bg(ctx, G, 0.35);
-      const logo = X.img.logo, lw = 300, lh = (lw * logo.height) / logo.width;
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(logo, Math.round(W / 2 - lw / 2), 10 + Math.round(Math.sin(G.frame * 0.04) * 2) + (G.phase < 0.1 ? -1 : 0), lw, lh); ctx.restore();
+      const logo = X.img.logo, lw = 270, lh = (lw * logo.height) / logo.width;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(logo, Math.round(W / 2 - lw / 2), 6 + Math.round(Math.sin(G.frame * 0.04) * 2) + (G.phase < 0.1 ? -1 : 0), lw, lh); ctx.restore();
+      ctx.drawImage(X.img.brutal_logo, 10, 10, 94, 16); // la marca, siempre a la vista
+      X.text('9 DE JULIO · BS. AS.', 10, 30, { color: '#5d6a8a' });
+      // el premio: lo que mueve a jugar otra vez
+      const pr = '★ EL TOP 3 SE LLEVA PREMIO ★';
+      X.text(pr, W / 2, 186, { align: 'center', color: (G.frame >> 3) % 2 ? '#f5c542' : '#ffffff', outline: true });
       const top = G.partyTop;
-      if (top) {
-        X.text('RÉCORD A VENCER', W / 2, 196, { align: 'center', color: '#8ea2c4', outline: true });
-        X.text(String(top.name).toUpperCase() + '  ' + U.fmtTime(top.timeMs / 1000), W / 2, 208, { scale: 2, align: 'center', color: (G.frame >> 4) % 2 ? '#f5c542' : '#ffffff', outline: true });
-      } else X.text('COMPETÍ POR EL MEJOR TIEMPO', W / 2, 206, { scale: 2, align: 'center', color: '#f5c542', outline: true });
+      if (top) X.text('A VENCER: ' + String(top.name).toUpperCase() + '  ' + U.fmtTime(top.timeMs / 1000), W / 2, 202, { scale: 2, align: 'center', color: '#ff2e4a', outline: true });
+      else X.text('COMPETÍ POR EL MEJOR TIEMPO', W / 2, 202, { scale: 2, align: 'center', color: '#ff2e4a', outline: true });
       const prof = NV.DB.profile();
       menu(G, [
         { label: '▶ JUGAR', x: W / 2, y: 244, w: 220, h: 34, scale: 3, color: '#b3132b', act: () => G.go(prof ? 'select' : 'register') },
@@ -165,7 +168,7 @@
 
   // ---------------- RESULTADOS ----------------
   S.results = {
-    enter(G) { G.mi = 0; G.rt = 0; G.confetti = []; },
+    enter(G) { G.mi = 0; G.rt = 0; G.confetti = []; G.top3 = null; NV.DB.top(3).then((r) => { G.top3 = r; }); },
     draw(ctx, G) {
       const X = NV.X, W = X.W, R = G.result, h = NV.HEROES[R.hero], rk = G.submit;
       const t = ++G.rt;
@@ -188,6 +191,11 @@
       X.text(rkTxt, W / 2 + 22, 120, { scale: 2, align: 'center', color: rkCol, outline: true });
       if (rk && rk.error) X.text(rk.error.toUpperCase(), W / 2 + 22, 140, { align: 'center', color: '#8ea2c4' });
       else if (rk && rk.rank && rk.rank <= 3) X.text('¡ESTÁS EN EL TOP 3! TE VAMOS A ESCRIBIR', W / 2 + 22, 140, { align: 'center', color: '#f5c542' });
+      else if (rk && rk.rank && G.top3 && G.top3[2]) {
+        // lo que falta para el premio: el empujón para jugar otra vez
+        const gap = R.time - G.top3[2].timeMs / 1000;
+        if (gap > 0) X.text('TE FALTAN ' + gap.toFixed(2) + ' S PARA EL TOP 3', W / 2 + 22, 140, { align: 'center', color: (G.frame >> 4) % 2 ? '#ff4fd8' : '#ffffff' });
+      }
       // medalla: cae como un sello
       const M = R.medal, mx = W / 2 + 168, my = 92;
       if (t === 34) NV.Audio.sfx('medal');
@@ -302,7 +310,7 @@
       const X = NV.X, W = X.W;
       bg(ctx, G, 0.7);
       X.text('¡SE ACABÓ EL TIEMPO!', W / 2, 90, { scale: 3, align: 'center', color: '#ff2e4a', outline: true });
-      X.text('EL GRINCH SE QUEDÓ CON LA NAVIDANCE', W / 2, 124, { scale: 1, align: 'center', color: '#7cff4d' });
+      X.text('EL APAGÓN CORTÓ LA NAVIDANCE', W / 2, 124, { scale: 1, align: 'center', color: '#4de2ff' });
       X.text('TENÉS 3 MINUTOS PARA LLEGAR Y VENCERLO', W / 2, 140, { align: 'center', color: '#8ea2c4' });
       menu(G, [
         { label: 'OTRA VEZ', x: W / 2 - 70, y: 200, w: 130, h: 32, color: '#b3132b', act: () => G.startRun(G.heroKey) },

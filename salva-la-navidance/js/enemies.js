@@ -4,8 +4,8 @@
 // =====================================================================
 (function () {
   const U = NV.U, C = NV.CFG, FX = NV.FX;
-  const SIZE = { snowman: [22, 30], nutcracker: [16, 40], skull: [20, 20], elf: [16, 26] };
-  const HP = { snowman: 2, nutcracker: 3, skull: 1, elf: 2 };
+  const SIZE = { patovica: [22, 30], bafle: [16, 40], dron: [20, 20], chispa: [16, 26] };
+  const HP = { patovica: 2, bafle: 3, dron: 1, chispa: 2 };
 
   NV.Enemy = function (d) {
     const [w, h] = SIZE[d.type];
@@ -19,13 +19,13 @@
     const pcx = p.x + 7, ecx = e.x + e.w / 2, dx = pcx - ecx, dy = (p.y + 17) - (e.y + e.h / 2);
     const near = Math.abs(dx) < NV.X.W * 0.6;
     switch (e.type) {
-      case 'snowman':
+      case 'patovica':
         if (e.patrol) { e.vx = e.dir * 0.6; if (e.x < e.patrol[0]) e.dir = 1; if (e.x + e.w > e.patrol[1]) e.dir = -1; }
         if (G.beatTick && e.onGround) e.vy = -1.8;           // salta en cada beat
         e.vy = Math.min(e.vy + C.GRAVITY, C.MAX_FALL);
         NV.Phys.move(e, L); if (e.hitL) e.dir = 1; if (e.hitR) e.dir = -1;
         e.frame = (e.t >> 3) & 1; break;
-      case 'nutcracker':
+      case 'bafle':
         e.dir = dx > 0 ? 1 : -1;
         if (G.beatTick && near && Math.abs(dy) < 140) {
           const b = G.beat & 3;
@@ -35,7 +35,7 @@
         if (e.shootT > 0) e.shootT--;
         e.frame = e.shootT > 0 ? 3 : e.shootT < 0 ? 2 : (G.beat & 1);
         e.vy = Math.min(e.vy + C.GRAVITY, C.MAX_FALL); NV.Phys.move(e, L); break;
-      case 'skull': {
+      case 'dron': {
         const bp = G.beatPos;
         const range = e.patrol ? (e.patrol[1] - e.patrol[0]) / 2 : 40;
         const mid = e.patrol ? (e.patrol[0] + e.patrol[1]) / 2 - e.w / 2 : e.home.x;
@@ -43,7 +43,7 @@
         e.dir = nx > e.x ? 1 : -1; e.x = nx; e.y = e.home.y + Math.sin(bp * Math.PI) * 6;
         e.frame = (e.t >> 3) % 3; break;
       }
-      case 'elf':
+      case 'chispa':
         e.dir = dx > 0 ? 1 : -1;
         if (G.beatTick && e.onGround && (G.beat & 1) === 0) e.vy = -3.4;
         if (G.beatTick && near && (G.beat & 3) === 1) {
@@ -78,20 +78,20 @@
     FX.boom(G, cx, cy); FX.burst(G, cx, cy, '#ffd23d', 10, 2.4, 20, 0.05, 2);
     const chain = G.player.chain || 1;
     const pts = how === 'stomp' ? C.STOMP_PTS * chain : C.KILL_PTS;
-    G.score += pts; G.kills++;
+    G.score += pts; G.kills++; G.addCombo(cx, e.y);
     FX.text(G, how === 'stomp' ? (chain > 1 ? '¡PISOTÓN x' + chain + '!' : '¡PISOTÓN!') : '+' + pts, cx, e.y - 6, how === 'stomp' ? '#f5c542' : '#ffffff', 1);
     for (let i = 0; i < 2; i++) G.coins.push(NV.Coin(cx, cy, true));
   };
 
   NV.drawEnemy = function (e, cx, cy) {
-    NV.X.spr(e.type, e.frame, e.x + e.w / 2 - cx, e.y + e.h - cy + (e.type === 'skull' ? 4 : 0) + (e.type === 'nutcracker' ? 2 : 0) + (e.type === 'snowman' ? 2 : 0) + (e.type === 'elf' ? 1 : 0), { flip: e.dir < 0, flash: e.flash > 0 });
+    NV.X.spr(e.type, e.frame, e.x + e.w / 2 - cx, e.y + e.h - cy + (e.type === 'dron' ? 4 : 0) + (e.type === 'bafle' ? 2 : 0) + (e.type === 'patovica' ? 2 : 0) + (e.type === 'chispa' ? 1 : 0), { flip: e.dir < 0, flash: e.flash > 0 });
   };
 
   // =====================================================================
-  //  CYBER-GRINCH — jefe final. Ataques al ritmo (1 ataque por compás):
+  //  EL APAGÓN — jefe final. Ataques al ritmo (1 ataque por compás):
   //  LÁSER de sus lentes (apunta y dispara), LLUVIA de adornos, PISOTÓN con onda.
   // =====================================================================
-  const GM = () => window.ART_DATA.sprites.grinch;
+  const GM = () => window.ART_DATA.sprites.apagon;
   NV.Boss = function (A) {
     return { cx: A.bossX, by: A.bossY, w: 84, h: 118, hp: 70, maxHp: 70, phase: 1, active: false, dead: false, deathT: 0,
       frame: 0, flash: 0, atk: 'intro', bar: -1, startBeat: 0, aims: [], beams: 0, seq: 0, hurtT: 0 };
@@ -110,7 +110,8 @@
       return;
     }
     if (!b.active) { b.frame = (G.beat & 1); return; }
-    if (b.phase === 1 && b.hp <= b.maxHp / 2) { b.phase = 2; G.sfx('roar'); G.shake(8); FX.text(G, '¡FURIA!', b.cx, b.by - 140, '#ff2e4a', 2, 80); }
+    if (b.phase === 1 && b.hp <= b.maxHp / 2) { b.phase = 2; b.blackT = 0; G.sfx('blackout'); G.shake(8); G.say('¡APAGÓN TOTAL!', { scale: 3, life: 90, color: '#ff2e4a', sub: 'SE CORTÓ LA LUZ · ATACA MÁS RÁPIDO' }); }
+    if (b.phase === 2) b.blackT = (b.blackT || 0) + 1;
 
     // ---- elegir ataque al comienzo de cada compás ----
     if (G.beatTick) {
@@ -201,8 +202,36 @@
     }
     if (b.dead && b.deathT > 130) return;
     const glow = b.atk === 'rest' && !b.dead;
-    X.spr('grinch', b.frame, b.cx - cx, b.by - cy, { flash: b.flash > 0 || (b.dead && (G.frame >> 1) % 2 && b.deathT < 110) });
+    X.spr('apagon', b.frame, b.cx - cx, b.by - cy, { flash: b.flash > 0 || (b.dead && (G.frame >> 1) % 2 && b.deathT < 110) });
     if (glow) { const m = GM(); ctx.save(); ctx.fillStyle = '#9dffbf'; ctx.globalAlpha = 0.5 + 0.5 * Math.sin(G.frame * 0.4); NV.Input.circ(ctx, b.cx - m.w / 2 + m.core[0] - cx, b.by - m.h + m.core[1] - cy, 7); ctx.restore(); }
+    if (b.dead) return;
+    // brillo de los ojos y arcos eléctricos entre los aisladores (más intensos en el apagón total)
+    const m = GM(), ox = b.cx - m.w / 2 - cx, oy = b.by - m.h - cy;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    [m.lensL, m.lensR].forEach((l, i) => {
+      const r = 14 + (b.aimLive ? 6 : 0) + (b.phase === 2 ? 4 : 0) + Math.sin(G.frame * 0.3) * 2;
+      const g = ctx.createRadialGradient(ox + l[0], oy + l[1], 0, ox + l[0], oy + l[1], r);
+      g.addColorStop(0, i ? 'rgba(51,224,122,.55)' : 'rgba(255,46,74,.55)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.fillRect(ox + l[0] - r, oy + l[1] - r, r * 2, r * 2);
+    });
+    if (G.frame % (b.phase === 2 ? 3 : 7) < 2) {
+      ctx.strokeStyle = '#bff6ff'; ctx.lineWidth = 1; ctx.beginPath();
+      let x = ox + 48, y = oy + 2; ctx.moveTo(x, y);
+      for (let k = 0; k < 6; k++) { x += 8; y = oy + 2 + U.rand(-6, 4); ctx.lineTo(Math.round(x), Math.round(y)); }
+      ctx.stroke();
+    }
+    ctx.restore();
+  };
+  // APAGÓN TOTAL (fase 2): se corta la luz del lugar; queda un círculo de luz alrededor del DJ
+  // y los ojos del jefe. Oscurece solo el escenario: jefe, ataques y avisos se dibujan encima.
+  NV.drawBlackout = function (ctx, G, cx, cy) {
+    const b = G.boss; if (!b || b.phase !== 2 || b.dead) return;
+    const p = G.player, W = NV.X.W, t = b.blackT || 0;
+    if (t < 40 && (t >> 2) % 2) return; // parpadeo al cortarse la luz
+    const px = p.x + 7 - cx, py = p.y + 16 - cy;
+    const g = ctx.createRadialGradient(px, py, 30, px, py, 150);
+    g.addColorStop(0, 'rgba(2,2,10,0)'); g.addColorStop(1, 'rgba(2,2,10,.82)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, 360);
   };
   function beam(ctx, x0, y0, x1, y1, w, c, a) {
     ctx.globalAlpha = a; ctx.strokeStyle = c; ctx.lineWidth = w; ctx.lineCap = 'butt';

@@ -21,7 +21,7 @@
   // preload 'none': cada canción se descarga recién cuando suena (en el menú o al elegir DJ),
   // así el celular no baja los ~13 MB de las 3 canciones al abrir el juego.
   for (const k in MD) {
-    const el = new Audio(); el.src = MD[k].file; el.preload = 'none'; el.loop = true; el.volume = A.vol;
+    const el = new Audio(); el.src = MD[k].file + '?v=' + NV.VERSION; el.preload = 'none'; el.loop = true; el.volume = A.vol;
     A.el[k] = el;
   }
 
@@ -142,6 +142,10 @@
         osc('triangle', mtof(96), t + 1.05, 0.9, 0.05); break;
       // ovación del público: ruido que crece + silbidos
       case 'cheer': noise(t, 1.8, 0.16, 'bandpass', 1400, 2200); for (let i = 0; i < 5; i++) osc('sine', 1200 + i * 180, t + 0.15 + i * 0.22, 0.3, 0.03, { to: 2200 + i * 150 }); break;
+      // FIEBRE: barrido que sube + acorde brillante
+      case 'fever': osc('sawtooth', 220, t, 0.45, 0.07, { to: 1760, lp: 4000 }); [72, 76, 79, 84].forEach((m) => osc('square', mtof(m), t + 0.3, 0.3, 0.04)); break;
+      // corte de luz: zumbido que se apaga
+      case 'blackout': osc('sawtooth', 60, t, 1.2, 0.18, { to: 20, lp: 600 }); noise(t, 0.3, 0.2, 'highpass', 3000); break;
       case 'medal': osc('square', 140, t, 0.12, 0.2, { to: 60 }); noise(t, 0.18, 0.15, 'lowpass', 2500, 300); [79, 84, 88, 91].forEach((m, i) => osc('square', mtof(m), t + 0.12 + i * 0.06, 0.12, 0.06)); break;
       case 'timeout': [72, 67, 64, 60].forEach((m, i) => osc('square', mtof(m), t + i * 0.18, 0.22, 0.08)); break;
     }

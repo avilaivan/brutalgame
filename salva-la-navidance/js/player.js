@@ -35,11 +35,13 @@
       G.sfx('dash');
     }
     if (p.dash > 0) {
-      p.dash--; p.vx = p.dashDir * C.DASH_SPEED;
+      p.dash--; p.vx = p.dashDir * C.DASH_SPEED * (G.fever() ? C.FEVER_SPEED : 1);
       if (p.dash % 2 === 0) p.ghosts.push({ x: p.x, y: p.y, a: p.anim, f: p.frame, dir: p.dir, life: 10 });
       if (p.onGround && p.dash % 3 === 0) FX.part(G, { x: p.x + 7 - p.dashDir * 8, y: p.y + p.h - 2, vx: -p.dashDir * 0.5, vy: -0.4, color: '#e9f4ff', life: 14, max: 14 });
     } else if (p.hurt === 0) {
-      p.vx = ix * (p.dashJump && !p.onGround ? C.DASH_SPEED * 0.85 : C.RUN);
+      p.vx = ix * (p.dashJump && !p.onGround ? C.DASH_SPEED * 0.85 : C.RUN) * (G.fever() ? C.FEVER_SPEED : 1);
+      // FIEBRE: estela de imágenes del personaje
+      if (G.fever() && ix && G.frame % 3 === 0) p.ghosts.push({ x: p.x, y: p.y, a: p.anim, f: p.frame, dir: p.dir, life: 10 });
     }
     if (p.onGround) { p.dashJump = false; p.airDashUsed = false; }
 
@@ -97,7 +99,7 @@
 
   NV.hurtPlayer = function (p, G, srcX, dmg = 1) {
     if (p.dead || p.invuln > 0 || p.shield > 0 || G.state !== 'play') return false;
-    p.hp -= dmg; G.shake(5); G.hitstop = 4; G.vib(45);
+    p.hp -= dmg; G.shake(5); G.hitstop = 4; G.vib(45); G.breakCombo();
     if (p.hp <= 0) { NV.killPlayer(p, G); return true; }
     p.dir = srcX > p.x + 7 ? 1 : -1; p.hurt = 16; p.invuln = C.INVULN; p.vy = Math.min(p.vy, -2.4);
     G.sfx('hurt'); G.flash('#ff2e4a', 6);
@@ -124,7 +126,7 @@
 
   NV.drawPlayer = function (ctx, p, G, cx, cy) {
     const X = NV.X; const fx = p.x + 7 - cx, fy = p.y + p.h - cy;
-    for (const g of p.ghosts) X.hero(p.key, g.a, g.f, g.x + 7 - cx, g.y + p.h - cy, g.dir < 0, true, (g.life / 10) * 0.4);
+    for (const g of p.ghosts) X.hero(p.key, g.a, g.f, g.x + 7 - cx, g.y + p.h - cy, g.dir < 0, true, (g.life / 10) * 0.22);
     if (p.dead) { drawDeath(ctx, p, G, fx, fy); return; }
     if (p.invuln > 0 && p.hurt === 0 && (G.frame >> 2) % 2 === 0) return;
     const flash = p.hurt > 0 && (G.frame >> 1) % 2 === 0;
