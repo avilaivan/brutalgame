@@ -71,7 +71,7 @@
         if (split) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.35; ctx.drawImage(img, lx - split, ly, lw, lh); ctx.drawImage(img, lx + split, ly, lw, lh); }
         ctx.restore();
         // destello cuando se completa + barrido de brillo
-        if (t >= 52 && t < 60) { ctx.globalAlpha = (60 - t) / 8 * 0.6; X.rect(0, 0, W, 360, '#ffffff'); ctx.globalAlpha = 1; }
+        if (t >= 52 && t < 60 && NV.OPT.fx) { ctx.globalAlpha = (60 - t) / 8 * 0.6; X.rect(0, 0, W, 360, '#ffffff'); ctx.globalAlpha = 1; }
         const sw = (t - 70) * 9;
         if (sw > 0 && sw < lw + 60) { ctx.save(); ctx.beginPath(); ctx.rect(lx, ly, lw, lh); ctx.clip(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5 * (1 - out); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(lx + sw - 30, ly); ctx.lineTo(lx + sw, ly); ctx.lineTo(lx + sw - 20, ly + lh); ctx.lineTo(lx + sw - 50, ly + lh); ctx.fill(); ctx.restore(); }
       }
@@ -102,8 +102,9 @@
       const prof = NV.DB.profile();
       menu(G, [
         { label: '▶ JUGAR', x: W / 2, y: 244, w: 220, h: 34, scale: 3, color: '#b3132b', act: () => G.go(prof ? 'select' : 'register') },
-        { label: 'RANKING', x: W / 2 - 58, y: 288, w: 112, h: 26, color: '#2559d6', act: () => G.go('ranking') },
-        { label: prof ? 'CAMBIAR' : 'REGISTRO', x: W / 2 + 58, y: 288, w: 112, h: 26, color: '#1c9e4f', act: () => G.go('register') },
+        { label: 'RANKING', x: W / 2 - 116, y: 288, w: 108, h: 26, color: '#2559d6', act: () => G.go('ranking') },
+        { label: prof ? 'CAMBIAR' : 'REGISTRO', x: W / 2, y: 288, w: 108, h: 26, color: '#1c9e4f', act: () => G.go('register') },
+        { label: 'OPCIONES', x: W / 2 + 116, y: 288, w: 108, h: 26, color: '#7a5cff', act: () => { G.optBack = 'title'; G.go('options'); } },
       ]);
       if (prof) X.text('JUGANDO COMO ' + prof.name.toUpperCase() + '  @' + prof.ig, W / 2, 312, { align: 'center', color: '#cfd8e6' });
       X.text(NV.Input.isTouch ? 'TOCÁ PARA ELEGIR' : 'FLECHAS + ENTER  ·  M: SONIDO', W / 2, 344, { align: 'center', color: '#5d6a8a' });
@@ -220,6 +221,47 @@
     },
   };
 
+  // ---------------- OPCIONES ----------------
+  // Se entra desde el título o desde la pausa (G.optBack dice adónde volver).
+  S.options = {
+    enter(G) { G.mi = 0; },
+    draw(ctx, G) {
+      const X = NV.X, W = X.W, O = NV.OPT, A = NV.Audio;
+      if (G.optBack === 'play') { ctx.fillStyle = '#07060b'; ctx.fillRect(0, 0, W, 360); } else bg(ctx, G, 0.7);
+      X.text('OPCIONES', W / 2, 24, { scale: 3, align: 'center', color: '#f5c542', outline: true });
+      const rows = [
+        { label: 'MÚSICA', val: O.music, max: 10, set: (v) => { O.music = v; A.applyOpts(); } },
+        { label: 'EFECTOS', val: O.sfx, max: 10, set: (v) => { O.sfx = v; A.applyOpts(); A.sfx('coin'); } },
+        { label: 'VIBRACIÓN', val: O.vib, set: (v) => { O.vib = v; if (v && navigator.vibrate) try { navigator.vibrate(40); } catch (e) {} } },
+        { label: 'DESTELLOS Y TEMBLOR', val: O.fx, set: (v) => { O.fx = v; } },
+        { label: 'VOLVER', back: true },
+      ];
+      const back = () => { NV.saveOpt(); NV.Audio.sfx('select'); if (G.optBack === 'play') { G.state = 'play'; IN.clear(); IN.touchOn = true; } else G.go('title'); };
+      if (IN.edge('up')) { G.mi = (G.mi + rows.length - 1) % rows.length; A.sfx('move'); }
+      if (IN.edge('down')) { G.mi = (G.mi + 1) % rows.length; A.sfx('move'); }
+      const change = (r, d) => { if (r.back) return; if (r.max) r.set(U.clamp(r.val + d, 0, r.max)); else r.set(!r.val); if (r.max) A.sfx('move'); };
+      const tap = G.tapThisFrame;
+      rows.forEach((r, i) => {
+        const y = 74 + i * 44, sel = G.mi === i, x0 = W / 2 - 190, rw = 380;
+        if (r.back) { const rr = X.button('VOLVER', W / 2, y + 14, 160, 30, { active: sel }); if (IN.inRect(tap, rr)) back(); return; }
+        X.panel(x0, y, rw, 34, { fill: sel ? 'rgba(179,19,43,.35)' : 'rgba(10,10,22,.85)', border: sel ? '#ffffff' : '#3a4466' });
+        X.text(r.label, x0 + 12, y + 11, { color: sel ? '#ffffff' : '#cfd8e6' });
+        if (r.max) {
+          for (let b = 0; b < r.max; b++) X.rect(x0 + 190 + b * 14, y + 10, 10, 14, b < r.val ? (sel ? '#f5c542' : '#8ea2c4') : '#1a1e30');
+          X.text('◀', x0 + 176, y + 11, { color: '#5d6a8a' }); X.text('▶', x0 + 336, y + 11, { color: '#5d6a8a' });
+        } else X.text(r.val ? 'SÍ' : 'NO', x0 + rw - 20, y + 9, { scale: 2, align: 'right', color: r.val ? '#33e07a' : '#ff2e4a' });
+        // tocar: mitad izquierda baja, mitad derecha sube (o cambia SÍ/NO)
+        if (IN.inRect(tap, { x: x0, y, w: rw, h: 34 })) { G.mi = i; change(r, tap.x < x0 + 190 + (r.max || 0) * 7 ? -1 : 1); }
+      });
+      const r = rows[G.mi];
+      if (IN.edge('left')) change(r, -1);
+      if (IN.edge('right')) change(r, 1);
+      if (IN.edge('confirm') || IN.edge('jump')) { if (r.back) back(); else if (!r.max) change(r, 1); }
+      if (IN.edge('back') || IN.edge('pause')) back();
+      if (!NV.OPT.fx) X.text('SIN FLASHES DE PANTALLA NI SACUDIDAS DE CÁMARA', W / 2, 300, { align: 'center', color: '#5d6a8a' });
+    },
+  };
+
   // ---------------- PLACA PARA HISTORIAS DE INSTAGRAM ----------------
   // Se arma en 360x640 con el estilo pixel y se agranda x3 (1080x1920, formato historia).
   async function shareCard(G) {
@@ -308,7 +350,7 @@
     menu(G, [
       { label: 'CONTINUAR', x: W / 2, y: 150, w: 200, act: () => G.unpause() },
       { label: 'REINICIAR', x: W / 2, y: 186, w: 200, act: () => { G.paused = false; G.startRun(G.heroKey); } },
-      { label: NV.Audio.muted ? 'SONIDO: NO' : 'SONIDO: SÍ', x: W / 2, y: 222, w: 200, act: () => NV.Audio.toggleMute() },
+      { label: 'OPCIONES', x: W / 2, y: 222, w: 200, act: () => { G.optBack = 'play'; G.state = 'options'; G.mi = 0; IN.clear(); IN.touchOn = false; } },
       { label: 'SALIR', x: W / 2, y: 258, w: 200, act: () => { G.paused = false; G.go('title'); NV.Audio.preview(G.heroKey); } },
     ]);
   };

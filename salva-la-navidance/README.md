@@ -56,6 +56,13 @@ Los datos se guardan en `data/scores.json`. Para empezar el ranking de cero, bor
 | Pausa | II | Esc / P | Start |
 | Reiniciar al instante | (desde la pausa) | R | Select |
 
+### Opciones
+Desde el título o la pausa: volumen de música y efectos, vibración (Android) y **destellos y temblor** (apagarlo quita los flashes de pantalla y las sacudidas de cámara, para gente sensible a las luces). Quedan guardadas en cada celular.
+
+### Compartir
+- **En resultados**, COMPARTIR arma una placa para historias de Instagram (1080×1920).
+- **El link del juego** muestra vista previa con imagen al pegarlo en WhatsApp o Instagram (`assets/img/og.png`), y se puede agregar a la pantalla de inicio del celular con ícono propio.
+
 ### Ghost, medallas y rango
 - **Ghost:** tu mejor partida corre al lado tuyo como silueta blanca, y en la barra de progreso hay una marca blanca con su posición.
 - **Medallas:** al terminar recibís un rango según tu tiempo: **S** < 60 s, **A** < 75 s, **B** < 95 s, **C** el resto. Se ajustan en `js/core.js` (`MEDALS`) cuando haya tiempos reales de la fiesta.

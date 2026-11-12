@@ -50,7 +50,7 @@
     ivan_portrait: 'assets/img/ivan_portrait.jpg', hades_portrait: 'assets/img/hades_portrait.jpg', matias_portrait: 'assets/img/matias_portrait.jpg',
     grinch_card: 'assets/img/grinch_card.jpg',
   };
-  const WHITE = ['ivan', 'hades', 'matias', 'snowman', 'nutcracker', 'skull', 'elf', 'grinch'];
+  const WHITE = ['ivan', 'hades', 'matias', 'snowman', 'nutcracker', 'skull', 'elf', 'grinch', 'heart', 'coin'];
   X.load = function (done) {
     const keys = Object.keys(LIST); X.total = keys.length;
     keys.forEach((k) => {

@@ -8,10 +8,11 @@
     camX: 0, camY: 8, shakeT: 0, shakeM: 0, flashT: 0, flashC: '#fff', hitstop: 0, bass: 0, onset: 0, beat: 0, beatPos: 0, phase: 0, lastBeat: -1 };
   NV.G = G;
   G.sfx = (n) => A.sfx(n);
-  G.shake = (m) => { G.shakeM = Math.max(G.shakeM, m); G.shakeT = 12; };
-  G.flash = (c, t = 8) => { G.flashC = c; G.flashT = t; };
+  // con "destellos y temblor" apagado (opciones) no hay sacudidas de cámara ni flashes de pantalla
+  G.shake = (m) => { if (!NV.OPT.fx) return; G.shakeM = Math.max(G.shakeM, m); G.shakeT = 12; };
+  G.flash = (c, t = 8) => { if (!NV.OPT.fx) return; G.flashC = c; G.flashT = t; };
   // vibración en celulares (Android; iPhone lo ignora)
-  G.vib = (ms) => { if (IN.isTouch && navigator.vibrate) try { navigator.vibrate(ms); } catch (e) {} };
+  G.vib = (ms) => { if (NV.OPT.vib && IN.isTouch && navigator.vibrate) try { navigator.vibrate(ms); } catch (e) {} };
   G.banner = null;
   G.say = (s, o = {}) => { G.banner = Object.assign({ s, t: 0, life: o.life || 110 }, o); };
 
@@ -35,7 +36,7 @@
     G.bullets = []; G.parts = []; G.booms = []; G.texts = []; G.marks = [];
     G.cp = 0; G.runTime = 0; G.running = false; G.finished = false; G.finishT = 0;
     G.coinsGot = 0; G.score = 0; G.kills = 0; G.deaths = 0; G.splits = [];
-    G.bossOn = false; G.boss = null; G.banner = null; G.paused = false; G.vsT = 0; G.hype = 0; G.tip = (G.tip || Math.floor(Math.random() * 9)) + 1;
+    G.bossOn = false; G.boss = null; G.banner = null; G.paused = false; G.vsT = 0; G.hype = 0; G.gIdx = 0; G.gDelta = null; G.coinPop = 0; G.hpLost = 0; G.tip = (G.tip || Math.floor(Math.random() * 9)) + 1;
     const c0 = G.L.checkpoints[0];
     G.player = NV.Player(hero, c0.x, c0.y);
     G.ghostRec = []; G.ghost = NV.DB.ghost();
@@ -66,7 +67,7 @@
   };
 
   G.getCoin = function (x, y) {
-    G.coinsGot++; G.score += C.COIN_PTS; G.sfx('coin');
+    G.coinsGot++; G.score += C.COIN_PTS; G.sfx('coin'); G.coinPop = 8;
     FX.part(G, { x, y, vx: 0, vy: -0.6, color: '#fff3c4', life: 8, max: 8, size: 3 });
   };
   G.getItem = function (it) {
@@ -134,6 +135,12 @@
     NV.updatePlayer(p, G, !G.running && !G.finished);
     // grabar el recorrido para el ghost (30 muestras por segundo; 0 = muerto/invisible)
     if (G.running) for (const gi = Math.floor(G.runTime * 30); G.ghostRec.length <= gi;) G.ghostRec.push(p.dead ? 0 : [Math.round(p.x), Math.round(p.y), p.anim, p.frame, p.dir]);
+    // diferencia contra el ghost: cuándo pasó tu récord por donde estás ahora (- = vas adelante)
+    if (G.running && G.ghost && !G.bossOn) {
+      const f = G.ghost.f; G.gIdx = G.gIdx || 0;
+      while (G.gIdx < f.length && (f[G.gIdx] === 0 || f[G.gIdx][0] < p.x)) G.gIdx++;
+      if (G.gIdx < f.length && p.x > 120) G.gDelta = G.runTime - G.gIdx / 30;
+    }
 
     // checkpoints (con tiempo parcial vs tu mejor)
     for (let i = G.cp + 1; i < L.checkpoints.length; i++) {
