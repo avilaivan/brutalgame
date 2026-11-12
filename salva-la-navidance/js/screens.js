@@ -85,13 +85,20 @@
 
   // ---------------- TÍTULO ----------------
   S.title = {
-    enter(G) { G.mi = 0; if (!G.menuMusic) { G.menuMusic = true; NV.Audio.preview(U.pick(NV.HERO_ORDER)); } },
+    enter(G) {
+      G.mi = 0; if (!G.menuMusic) { G.menuMusic = true; NV.Audio.preview(U.pick(NV.HERO_ORDER)); }
+      G.partyTop = null; NV.DB.top(1).then((r) => { G.partyTop = r && r[0]; }); // récord a vencer
+    },
     draw(ctx, G) {
       const X = NV.X, W = X.W;
       bg(ctx, G, 0.35);
       const logo = X.img.logo, lw = 300, lh = (lw * logo.height) / logo.width;
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(logo, Math.round(W / 2 - lw / 2), 10 + Math.round(Math.sin(G.frame * 0.04) * 2) + (G.phase < 0.1 ? -1 : 0), lw, lh); ctx.restore();
-      X.text('COMPETÍ POR EL MEJOR TIEMPO', W / 2, 206, { scale: 2, align: 'center', color: '#f5c542', outline: true });
+      const top = G.partyTop;
+      if (top) {
+        X.text('RÉCORD A VENCER', W / 2, 196, { align: 'center', color: '#8ea2c4', outline: true });
+        X.text(String(top.name).toUpperCase() + '  ' + U.fmtTime(top.timeMs / 1000), W / 2, 208, { scale: 2, align: 'center', color: (G.frame >> 4) % 2 ? '#f5c542' : '#ffffff', outline: true });
+      } else X.text('COMPETÍ POR EL MEJOR TIEMPO', W / 2, 206, { scale: 2, align: 'center', color: '#f5c542', outline: true });
       const prof = NV.DB.profile();
       menu(G, [
         { label: '▶ JUGAR', x: W / 2, y: 244, w: 220, h: 34, scale: 3, color: '#b3132b', act: () => G.go(prof ? 'select' : 'register') },
@@ -203,14 +210,48 @@
       for (const c of G.confetti) { c.x += c.vx + Math.sin((t + c.r * 10) * 0.08) * 0.4; c.y += c.vy; X.rect(c.x, c.y, (t + c.r) % 8 < 4 ? 3 : 1, 3, c.c); }
       G.confetti = G.confetti.filter((c) => c.y < 364);
       menu(G, [
-        { label: 'OTRA VEZ', x: W / 2 - 140, y: 286, w: 128, h: 32, color: '#b3132b', act: () => G.startRun(R.hero) },
-        { label: 'RANKING', x: W / 2, y: 286, w: 128, h: 32, color: '#2559d6', act: () => G.go('ranking') },
-        { label: 'CAMBIAR DJ', x: W / 2 + 140, y: 286, w: 128, h: 32, color: '#1c9e4f', act: () => G.go('select') },
+        { label: 'OTRA VEZ', x: W / 2 - 198, y: 286, w: 124, h: 32, color: '#b3132b', act: () => G.startRun(R.hero) },
+        { label: 'COMPARTIR', x: W / 2 - 66, y: 286, w: 124, h: 32, color: '#c2187a', act: () => shareCard(G).catch(() => {}) },
+        { label: 'RANKING', x: W / 2 + 66, y: 286, w: 124, h: 32, color: '#2559d6', act: () => G.go('ranking') },
+        { label: 'CAMBIAR DJ', x: W / 2 + 198, y: 286, w: 124, h: 32, color: '#1c9e4f', act: () => G.go('select') },
       ], { horiz: true });
       X.text(NV.Input.isTouch ? '' : 'R: OTRA VEZ AL INSTANTE', W / 2, 318, { align: 'center', color: '#5d6a8a' });
       if (IN.edge('restart')) G.startRun(R.hero);
     },
   };
+
+  // ---------------- PLACA PARA HISTORIAS DE INSTAGRAM ----------------
+  // Se arma en 360x640 con el estilo pixel y se agranda x3 (1080x1920, formato historia).
+  async function shareCard(G) {
+    const X = NV.X, R = G.result, h = NV.HEROES[R.hero];
+    const c = document.createElement('canvas'); c.width = 360; c.height = 640;
+    const k = c.getContext('2d'); k.imageSmoothingEnabled = false;
+    const g = k.createLinearGradient(0, 0, 0, 640); g.addColorStop(0, '#07060b'); g.addColorStop(0.55, h.dark); g.addColorStop(1, '#07060b');
+    k.fillStyle = g; k.fillRect(0, 0, 360, 640);
+    for (let i = 0; i < 70; i++) { k.fillStyle = i % 7 ? '#3a4466' : '#dfe6f5'; k.fillRect((i * 97) % 360, (i * 53) % 640, 1, 1); }
+    const T = (s, x, y, o) => X.text(s, x, y, Object.assign({ ctx: k, align: 'center' }, o));
+    k.drawImage(X.img.brutal_logo, 180 - 59, 26, 118, 21);
+    const lw = 270, lh = Math.round((lw * X.img.logo.height) / X.img.logo.width);
+    k.globalCompositeOperation = 'lighter'; k.drawImage(X.img.logo, 180 - lw / 2, 56, lw, lh); k.globalCompositeOperation = 'source-over'; // el logo trae fondo negro
+    const py = 60 + lh;
+    k.fillStyle = '#ffffff'; k.fillRect(180 - 88, py - 2, 176, 176); k.fillStyle = h.color; k.fillRect(180 - 86, py, 172, 172);
+    k.drawImage(X.img[R.hero + '_portrait'], 180 - 84, py + 2, 168, 168);
+    T(h.name, 180, py + 182, { scale: 2, color: h.light, outline: true, ctx: k });
+    T('MI TIEMPO', 180, py + 212, { color: '#8ea2c4', ctx: k });
+    T(U.fmtTime(R.time), 180, py + 224, { scale: 4, color: '#ffffff', outline: true, ctx: k });
+    T('RANGO ' + R.medal[0], 180, py + 268, { scale: 3, color: R.medal[2], outline: true, ctx: k });
+    if (G.submit && G.submit.rank) T('PUESTO #' + G.submit.rank + ' DE LA FIESTA', 180, py + 300, { color: '#f5c542', ctx: k });
+    T('¿ME GANÁS?', 180, 590, { scale: 3, color: '#ff2e4a', outline: true, ctx: k });
+    const big = document.createElement('canvas'); big.width = 1080; big.height = 1920;
+    const b = big.getContext('2d'); b.imageSmoothingEnabled = false; b.drawImage(c, 0, 0, 1080, 1920);
+    const blob = await new Promise((r) => big.toBlob(r, 'image/png'));
+    const file = new File([blob], 'navidance-brutal.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); return; } catch (e) { if (e.name === 'AbortError') return; }
+    }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; a.click(); // en compu: se descarga
+  }
+  S.shareCard = shareCard;
 
   // ---------------- SE ACABÓ EL TIEMPO ----------------
   S.timeout = {

@@ -97,7 +97,7 @@
 
   NV.hurtPlayer = function (p, G, srcX, dmg = 1) {
     if (p.dead || p.invuln > 0 || p.shield > 0 || G.state !== 'play') return false;
-    p.hp -= dmg; G.shake(5); G.hitstop = 4;
+    p.hp -= dmg; G.shake(5); G.hitstop = 4; G.vib(45);
     if (p.hp <= 0) { NV.killPlayer(p, G); return true; }
     p.dir = srcX > p.x + 7 ? 1 : -1; p.hurt = 16; p.invuln = C.INVULN; p.vy = Math.min(p.vy, -2.4);
     G.sfx('hurt'); G.flash('#ff2e4a', 6);
@@ -105,7 +105,7 @@
   };
   NV.killPlayer = function (p, G) {
     if (p.dead) return;
-    p.dead = true; p.deadT = 0; p.vx = p.vy = 0; p.hp = 0;
+    p.dead = true; p.deadT = 0; p.vx = p.vy = 0; p.hp = 0; G.vib(120);
     G.sfx('die_' + p.key); G.shake(7); G.deaths++;
   };
 

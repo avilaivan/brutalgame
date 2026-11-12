@@ -135,6 +135,8 @@
       case 'logo': osc('sine', 110, t, 0.9, 0.35, { to: 38 }); noise(t, 0.25, 0.12, 'lowpass', 1800, 120);
         [48, 55, 60, 64, 67, 72].forEach((m, i) => osc('square', mtof(m + 12), t + 0.55 + i * 0.07, 0.18, 0.05));
         osc('triangle', mtof(96), t + 1.05, 0.9, 0.05); break;
+      // ovación del público: ruido que crece + silbidos
+      case 'cheer': noise(t, 1.8, 0.16, 'bandpass', 1400, 2200); for (let i = 0; i < 5; i++) osc('sine', 1200 + i * 180, t + 0.15 + i * 0.22, 0.3, 0.03, { to: 2200 + i * 150 }); break;
       case 'medal': osc('square', 140, t, 0.12, 0.2, { to: 60 }); noise(t, 0.18, 0.15, 'lowpass', 2500, 300); [79, 84, 88, 91].forEach((m, i) => osc('square', mtof(m), t + 0.12 + i * 0.06, 0.12, 0.06)); break;
       case 'timeout': [72, 67, 64, 60].forEach((m, i) => osc('square', mtof(m), t + i * 0.18, 0.22, 0.08)); break;
     }

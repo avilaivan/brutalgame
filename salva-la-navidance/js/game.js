@@ -10,6 +10,8 @@
   G.sfx = (n) => A.sfx(n);
   G.shake = (m) => { G.shakeM = Math.max(G.shakeM, m); G.shakeT = 12; };
   G.flash = (c, t = 8) => { G.flashC = c; G.flashT = t; };
+  // vibración en celulares (Android; iPhone lo ignora)
+  G.vib = (ms) => { if (IN.isTouch && navigator.vibrate) try { navigator.vibrate(ms); } catch (e) {} };
   G.banner = null;
   G.say = (s, o = {}) => { G.banner = Object.assign({ s, t: 0, life: o.life || 110 }, o); };
 
@@ -33,7 +35,7 @@
     G.bullets = []; G.parts = []; G.booms = []; G.texts = []; G.marks = [];
     G.cp = 0; G.runTime = 0; G.running = false; G.finished = false; G.finishT = 0;
     G.coinsGot = 0; G.score = 0; G.kills = 0; G.deaths = 0; G.splits = [];
-    G.bossOn = false; G.boss = null; G.banner = null; G.paused = false;
+    G.bossOn = false; G.boss = null; G.banner = null; G.paused = false; G.vsT = 0; G.hype = 0; G.tip = (G.tip || Math.floor(Math.random() * 9)) + 1;
     const c0 = G.L.checkpoints[0];
     G.player = NV.Player(hero, c0.x, c0.y);
     G.ghostRec = []; G.ghost = NV.DB.ghost();
@@ -80,7 +82,7 @@
     const prevBest = NV.DB.best(); const better = !prevBest || time < prevBest;
     const medal = C.MEDALS.find((m) => time < m[1]);
     // el récord personal (y su ghost) se guarda solo si la partida es válida para el ranking
-    const savePb = () => { NV.DB.setBest(time); NV.DB.setSplits(G.splits); NV.DB.setGhost({ hero: G.heroKey, f: G.ghostRec }); G.result.pb = true; };
+    const savePb = () => { NV.DB.setBest(time); NV.DB.setSplits(G.splits); NV.DB.setGhost({ hero: G.heroKey, f: G.ghostRec }); G.result.pb = true; G.hype = 400; };
     G.result = { hero: G.heroKey, time, coins: G.coinsGot, deaths: G.deaths, score: G.score, pb: false, prevBest, medal };
     G.say('¡NAVIDANCE SALVADA!', { scale: 3, life: 220, sub: U.fmtTime(time), subColor: '#ffffff' });
     G.sfx('win');
@@ -121,6 +123,11 @@
     }
     if (G.finished) { G.finishT++; if (G.finishT > 240) { G.go('results'); return; } }
     if (G.banner) { G.banner.t++; if (--G.banner.life <= 0) G.banner = null; }
+    if (G.vsT) {
+      if (++G.vsT === 18) { G.sfx('slam'); G.shake(6); G.vib(60); }
+      if (G.vsT === 100) G.say('¡CYBER-GRINCH!', { scale: 3, life: 100, color: '#7cff4d', sub: 'ESQUIVÁ LOS LÁSERES DE SUS LENTES' });
+      if (G.vsT > 112) G.vsT = 0;
+    }
 
     if (G.hitstop > 0) { G.hitstop--; return; }
 
@@ -135,7 +142,7 @@
         G.cp = i; G.splits[i] = G.runTime; G.sfx('checkpoint');
         const pbS = NV.DB.splits()[i]; let sub = U.fmtTime(G.runTime), sc = '#ffffff';
         if (pbS) { const d = G.runTime - pbS; sub += '  ' + (d < 0 ? '-' : '+') + Math.abs(d).toFixed(2); sc = d < 0 ? '#33e07a' : '#ff2e4a'; }
-        G.say(c.label, { sub, subColor: sc, life: 100 });
+        G.say(c.label, { sub, subColor: sc, life: 100 }); G.hype = 50;
       }
     }
     // entrada a la arena del jefe
@@ -145,7 +152,7 @@
       for (let y = 0; y < NV.GR; y++) L.t[y * L.w + Ar.gateX] = T.GATE;
       G.boss = NV.Boss(Ar); G.enemies = [];
       G.sfx('roar'); G.shake(8);
-      G.say('¡CYBER-GRINCH!', { scale: 3, life: 120, color: '#7cff4d', sub: 'ESQUIVÁ LOS LÁSERES DE SUS LENTES' });
+      G.vsT = 1; // presentación VS (dura menos que lo que tarda el jefe en despertarse)
       G.bossWake = G.beat + 4 - (G.beat & 3) + 4; // se activa 2 compases después
     }
     if (G.boss && !G.boss.active && !G.boss.dead && G.beat >= G.bossWake) { G.boss.active = true; G.boss.startBeat = G.beat; }
@@ -240,9 +247,55 @@
     if (G.flashT > 0) { ctx.globalAlpha = G.flashT / 18; ctx.fillStyle = G.flashC; ctx.fillRect(0, 0, W, 360); ctx.globalAlpha = 1; G.flashT--; }
     NV.HUD.draw(ctx, G);
     // controles durante la cuenta regresiva (en celular los botones ya tienen nombre)
-    if (!G.running && !G.finished && !IN.isTouch) { X.rect(W / 2 - 170, 216, 340, 18, 'rgba(5,4,12,.8)'); X.text('◀ ▶ MOVER · Z SALTAR · X DISPARAR · C DASH · R REINICIAR', W / 2, 221, { align: 'center', color: '#ffffff' }); }
+    if (!G.running && !G.finished) {
+      if (!IN.isTouch) { X.rect(W / 2 - 170, 216, 340, 18, 'rgba(5,4,12,.8)'); X.text('◀ ▶ MOVER · Z SALTAR · X DISPARAR · C DASH · R REINICIAR', W / 2, 221, { align: 'center', color: '#ffffff' }); }
+      const tip = 'TIP: ' + TIPS[G.tip % TIPS.length];
+      X.rect(W / 2 - X.measure(tip) / 2 - 6, 238, X.measure(tip) + 12, 16, 'rgba(5,4,12,.8)');
+      X.text(tip, W / 2, 242, { align: 'center', color: '#f5c542' });
+    }
     if (IN.isTouch && !G.paused) { const r = X.button('II', W - 20, 64, 26, 20, { scale: 1 }); if (IN.inRect(G.tapThisFrame, r)) G.pauseTap = true; }
+    if (G.vsT) drawVS(ctx);
     if (G.paused) NV.Screens.pause(ctx, G);
+  }
+
+  // Un consejo distinto en cada cuenta regresiva
+  const TIPS = [
+    'MANTENÉ SALTO PARA SALTAR MÁS ALTO',
+    'PISÁ ENEMIGOS: REBOTÁS Y NO PERDÉS VELOCIDAD',
+    'EL DASH TAMBIÉN FUNCIONA EN EL AIRE',
+    'DASH + SALTO = SALTO LARGO Y RÁPIDO',
+    'CUANDO EL NÚCLEO DEL GRINCH BRILLA, RECIBE DOBLE DAÑO',
+    'HAY 2 MEGA B-COINS ESCONDIDAS EN EL NIVEL',
+    'CON EL ESCUDO DORADO ROMPÉS ENEMIGOS AL TOCARLOS',
+    'LA SILUETA BLANCA ES TU MEJOR PARTIDA: ¡GANALE!',
+    'EL JEFE ATACA AL RITMO: ESCUCHÁ LA CANCIÓN',
+  ];
+
+  // Presentación del jefe: tu DJ entra por la izquierda, el Grinch por la derecha, "VS" en el medio
+  function drawVS(ctx) {
+    const W = X.W, t = G.vsT, h = G.player.hero;
+    const ease = (v) => 1 - Math.pow(1 - U.clamp(v, 0, 1), 3);
+    const inn = ease(t / 16), out = U.clamp((t - 96) / 16, 0, 1);
+    ctx.save(); ctx.globalAlpha = 0.7 * (1 - out); X.rect(0, 0, W, 360, '#05040a'); ctx.restore();
+    const slide = (1 - inn) * W * 0.6 + out * W * 0.6, sk = 40; // desplazamiento y diagonal
+    const band = (x0, x1, col, img, ix, iw, ih, flip) => {
+      ctx.save(); ctx.beginPath(); ctx.moveTo(x0 + sk, 70); ctx.lineTo(x1 + sk, 70); ctx.lineTo(x1 - sk, 290); ctx.lineTo(x0 - sk, 290); ctx.closePath(); ctx.clip();
+      ctx.fillStyle = col; ctx.fillRect(x0 - sk, 70, x1 - x0 + sk * 2, 220);
+      if (flip) { ctx.translate(ix + iw, 0); ctx.scale(-1, 1); ctx.drawImage(img, 0, 76, iw, ih); } else ctx.drawImage(img, ix, 76, iw, ih);
+      ctx.restore();
+      X.rect(x0 - sk, 288, x1 - x0 + sk, 3, '#ffffff');
+    };
+    const lx = -slide, rx = slide;
+    band(lx - 20, lx + W / 2 - 12, h.dark, X.img[G.heroKey + '_portrait'], lx + W / 2 - 230, 210, 210, false);
+    band(rx + W / 2 + 12, rx + W + 60, '#0e3a12', X.img.grinch_card, rx + W / 2 + 30, 220, 212, false);
+    X.text(h.name, lx + 30, 296, { scale: 2, color: h.light, outline: true });
+    X.text('CYBER-GRINCH', rx + W - 30, 296, { scale: 2, align: 'right', color: '#7cff4d', outline: true });
+    if (t > 14 && out < 1) {
+      const pop = Math.max(1, 2.2 - (t - 14) * 0.15);
+      ctx.save(); ctx.translate(W / 2, 168); ctx.scale(pop, pop); ctx.globalAlpha = 1 - out;
+      X.text('VS', 0, -18, { scale: 6, align: 'center', color: (t >> 2) % 2 ? '#f5c542' : '#ffffff', outline: true });
+      ctx.restore();
+    }
   }
   G.unpause = function () { G.paused = false; A.resume(); IN.clear(); };
 
@@ -257,6 +310,7 @@
     if (BOT) bot();
     IN.update();
     updateMusic();
+    if (G.hype > 0) G.hype--; // euforia del público (checkpoint, jefe vencido, récord)
     if (G.state === 'play') updatePlay();
     G.frame++;
   }
@@ -265,8 +319,12 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     G.tapThisFrame = IN.tap();
     if (G.state === 'boot') {
-      ctx.fillStyle = '#07060b'; ctx.fillRect(0, 0, X.W, 360);
-      X.text('CARGANDO ' + Math.round((X.loaded / Math.max(1, X.total)) * 100) + '%', X.W / 2, 170, { scale: 2, align: 'center', color: '#f5c542' });
+      // pantalla de carga: barra roja de la marca + B-Coin girando
+      const pr = X.loaded / Math.max(1, X.total), bw = 180, bx = X.W / 2 - bw / 2;
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, X.W, 360);
+      X.text('CARGANDO', X.W / 2, 158, { align: 'center', color: '#5d6a8a', shadow: false });
+      X.rect(bx, 174, bw, 2, '#1a1e30'); X.rect(bx, 174, Math.round(bw * pr), 2, '#ff2e4a');
+      X.text(Math.round(pr * 100) + '%', X.W / 2, 184, { align: 'center', color: '#3a4466', shadow: false });
     } else if (G.state === 'play') drawPlay(ctx);
     else if (NV.Screens[G.state]) NV.Screens[G.state].draw(ctx, G);
     if (G.fadeT > 0) { ctx.fillStyle = 'rgba(7,6,11,' + G.fadeT / FADE + ')'; ctx.fillRect(0, 0, X.W, 360); G.fadeT--; }

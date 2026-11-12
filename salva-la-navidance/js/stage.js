@@ -168,12 +168,12 @@
       for (let i = i0; i < i0 + W / row.sp + 4; i++) {
         const h = hash(i, row.seed), s = row.s;
         const x = Math.round(i * row.sp - camX * row.f + (h % 7));
-        const jumper = hash(i + row.seed, beat) % 3 === 0;
+        const hype = G.hype > 0, jumper = hype || hash(i + row.seed, beat) % 3 === 0;
         const hr = Math.round((6 + (h % 2)) * s), sh = Math.round((10 + (h % 3)) * s); // radio de cabeza, medio ancho de hombros
-        const y = base + row.dy - Math.round((30 + (h % 12)) * s) - (jumper ? Math.round(hop * 6 * s) : 0);
+        const y = base + row.dy - Math.round((30 + (h % 12)) * s) - (jumper ? Math.round(hop * (hype ? 12 : 6) * s) : 0);
         ctx.fillStyle = row.col;
         // brazos arriba con los graves (o siempre, para algunos)
-        const arms = h % 5 === 0 || (bass > 0.45 && h % 3 === 0);
+        const arms = hype || h % 5 === 0 || (bass > 0.45 && h % 3 === 0);
         if (arms) { const up = Math.round(hop * 3); ctx.fillRect(x - sh, y - 10 - up, 3, 16); ctx.fillRect(x + sh - 3, y - 10 - up, 3, 16); }
         NV.Input.circ(ctx, x - sh + 4, y + hr + 5, 4); NV.Input.circ(ctx, x + sh - 4, y + hr + 5, 4); // hombros
         ctx.fillRect(x - sh, y + hr + 5, sh * 2, 80);  // torso

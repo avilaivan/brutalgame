@@ -74,7 +74,7 @@
   NV.killEnemy = function (e, G, how) {
     if (e.dead) return;
     e.dead = true; const cx = e.x + e.w / 2, cy = e.y + e.h / 2;
-    G.sfx(how === 'stomp' ? 'stomp' : 'kill'); G.shake(how === 'stomp' ? 3 : 2); G.hitstop = 3;
+    G.sfx(how === 'stomp' ? 'stomp' : 'kill'); G.shake(how === 'stomp' ? 3 : 2); G.hitstop = 3; G.vib(how === 'stomp' ? 18 : 10);
     FX.boom(G, cx, cy); FX.burst(G, cx, cy, '#ffd23d', 10, 2.4, 20, 0.05, 2);
     const chain = G.player.chain || 1;
     const pts = how === 'stomp' ? C.STOMP_PTS * chain : C.KILL_PTS;
@@ -106,7 +106,7 @@
     if (b.dead) {
       b.deathT++; b.frame = 5;
       if (b.deathT % 7 === 0 && b.deathT < 110) { FX.boom(G, b.cx + U.rand(-50, 50), b.by - U.rand(10, 110)); G.sfx('kill'); G.shake(3); }
-      if (b.deathT === 110) { G.sfx('big_boom'); G.shake(12); G.flash('#ffffff', 14); FX.boom(G, b.cx, b.by - 60, true); for (let i = 0; i < 40; i++) G.coins.push(NV.Coin(b.cx + U.rand(-30, 30), b.by - U.rand(30, 100), true, true)); }
+      if (b.deathT === 110) { G.sfx('big_boom'); G.shake(12); G.vib([80, 40, 200]); G.hype = 600; NV.Audio.sfx('cheer'); G.flash('#ffffff', 14); FX.boom(G, b.cx, b.by - 60, true); for (let i = 0; i < 40; i++) G.coins.push(NV.Coin(b.cx + U.rand(-30, 30), b.by - U.rand(30, 100), true, true)); }
       return;
     }
     if (!b.active) { b.frame = (G.beat & 1); return; }

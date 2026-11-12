@@ -120,6 +120,7 @@
     const w = X.measure(str, sc);
     let sx = o.align === 'center' ? x - Math.floor(w / 2) : o.align === 'right' ? x - w : x;
     sx = Math.round(sx); y = Math.round(y);
+    const ctx = o.ctx || X.ctx; // o.ctx: dibujar en otro canvas (placa para compartir)
     if (o.alpha !== undefined) ctx.globalAlpha = o.alpha;
     const pass = (color, dx, dy) => {
       const a = atlas(color); let cx = sx + dx;
