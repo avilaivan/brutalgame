@@ -4,11 +4,12 @@
 (function () {
   const C = NV.CFG;
   const X = { W: 640, H: C.H, img: {}, white: {}, loaded: 0, total: 0 };
+  // Rendimiento: se dibuja directo en el canvas visible a resolución interna (640x360 aprox.)
+  // y el navegador lo agranda por CSS con image-rendering: pixelated (lo hace la GPU, gratis).
+  // Antes se copiaba cada cuadro a un canvas del tamaño de la pantalla (hasta 3x en celulares).
   const disp = document.getElementById('game');
-  const dctx = disp.getContext('2d');
-  const buf = document.createElement('canvas');
-  const ctx = buf.getContext('2d');
-  X.ctx = ctx; X.buf = buf; X.disp = disp;
+  const ctx = disp.getContext('2d', { alpha: false });
+  X.ctx = ctx; X.disp = disp;
 
   // ---------------- escalado ----------------
   X.resize = function () {
@@ -16,19 +17,12 @@
     if (!ww || !wh) return; // ventana sin tamaño (pestaña oculta, rotando): esperar al próximo resize
     let W = Math.round((C.H * ww) / wh / 2) * 2;
     W = NV.U.clamp(W, C.MIN_W, C.MAX_W);
-    X.W = W; buf.width = W; buf.height = C.H;
+    X.W = W; disp.width = W; disp.height = C.H;
     const s = Math.min(ww / W, wh / C.H);
-    const cssW = Math.floor(W * s), cssH = Math.floor(C.H * s);
-    const dpr = Math.min(3, window.devicePixelRatio || 1);
-    disp.width = Math.round(cssW * dpr); disp.height = Math.round(cssH * dpr);
-    disp.style.width = cssW + 'px'; disp.style.height = cssH + 'px';
-    ctx.imageSmoothingEnabled = false;
+    disp.style.width = Math.floor(W * s) + 'px'; disp.style.height = Math.floor(C.H * s) + 'px';
+    ctx.imageSmoothingEnabled = false; // cambiar el tamaño del canvas reinicia el contexto
   };
-  X.present = function () {
-    if (!disp.width || !disp.height) return; // un drawImage con tamaño 0 tira error y frena el loop
-    dctx.imageSmoothingEnabled = false;
-    dctx.drawImage(buf, 0, 0, disp.width, disp.height);
-  };
+  X.present = function () {};
   X.toInternal = function (cx, cy) {
     const r = disp.getBoundingClientRect();
     return { x: ((cx - r.left) / r.width) * X.W, y: ((cy - r.top) / r.height) * C.H };
@@ -115,6 +109,28 @@
     for (const ch in GLYPH) { const g = GLYPH[ch]; for (const [px, py] of g.px) { x.fillStyle = rowCol(py); x.fillRect(g.x + px, py + TOP, 1, 1); } }
     atlases[key] = c; return c;
   }
+  // Rendimiento: cada letra arcade (sombra + contorno + degradé + trazo grueso) o con contorno
+  // se compone UNA vez en este atlas; después dibujar una letra es 1 drawImage en vez de 9-12.
+  const PAD = 1, SH = 2; // borde del contorno y caída de la sombra (en píxeles de la letra)
+  const comp = {};
+  function compAtlas(color, oc, fancy) {
+    const key = color + '|' + oc + (fancy ? '|f' : '|o');
+    if (comp[key]) return comp[key];
+    const base = atlas(color, fancy), ink = atlas(oc), shadow = fancy ? atlas('#05040a') : null;
+    const cells = {}; let cx = 0;
+    for (const ch in GLYPH) { const w = GLYPH[ch].w + (fancy ? 1 : 0) + PAD * 2; cells[ch] = { x: cx, w }; cx += w + 1; }
+    const c = document.createElement('canvas'); c.width = cx; c.height = GH + PAD * 2 + (fancy ? SH : 0);
+    const x = c.getContext('2d');
+    const stamp = (src, g, dx, dy, bold) => { x.drawImage(src, g.x, 0, g.w, GH, dx, dy, g.w, GH); if (bold) x.drawImage(src, g.x, 0, g.w, GH, dx + 1, dy, g.w, GH); };
+    const dirs = fancy ? [[-1, 0], [1, 0], [0, -1], [0, 1]] : [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, 1], [-1, 1], [1, -1]];
+    for (const ch in GLYPH) {
+      const g = GLYPH[ch], o = cells[ch].x + PAD;
+      if (fancy) stamp(shadow, g, o, PAD + SH, true);
+      for (const [dx, dy] of dirs) stamp(ink, g, o + dx, PAD + dy, fancy);
+      stamp(base, g, o, PAD, fancy);
+    }
+    return (comp[key] = { c, cells });
+  }
   const isDigit = (ch) => ch >= '0' && ch <= '9';
   function adv(ch, bold) { if (ch === ' ') return 4; const g = GLYPH[ch]; if (!g) return 6; return (isDigit(ch) ? 6 : g.w + 1) + (bold ? 1 : 0); }
   // fancy (por defecto en textos de escala 2 o más): trazo grueso + degradé + contorno + sombra dura
@@ -141,10 +157,13 @@
       }
     };
     const oc = o.outline && o.outline !== true ? o.outline : '#0b0a12';
-    if (fancy) {
-      pass('#05040a', 0, sc * 2);  // sombra dura
-      for (const [dx, dy] of [[-sc, 0], [sc, 0], [0, -sc], [0, sc]]) pass(oc, dx, dy);
-      pass(col, 0, 0, true);
+    if (fancy || o.outline) {
+      const A = compAtlas(col, oc, fancy); let cx = sx;
+      for (const ch of str) {
+        const g = GLYPH[ch], cell = A.cells[ch];
+        if (g) { const off = isDigit(ch) ? Math.floor((5 - g.w) / 2) : 0; ctx.drawImage(A.c, cell.x, 0, cell.w, A.c.height, cx + off * sc - PAD * sc, y - (TOP + PAD) * sc, cell.w * sc, A.c.height * sc); }
+        cx += adv(ch, fancy) * sc;
+      }
     } else {
       if (o.outline) { for (const [dx, dy] of [[-sc, 0], [sc, 0], [0, -sc], [0, sc], [-sc, -sc], [sc, sc], [-sc, sc], [sc, -sc]]) pass(oc, dx, dy); }
       else if (o.shadow !== false) pass(o.shadowColor || '#0b0a12', sc, sc);
@@ -174,15 +193,21 @@
     ctx.fillStyle = b1; ctx.fillRect(x + 1, y + 1, w - 2, 1); ctx.fillRect(x + 1, y + h - 2, w - 2, 1); ctx.fillRect(x + 1, y + 1, 1, h - 2); ctx.fillRect(x + w - 2, y + 1, 1, h - 2);
     if (o.light !== false) { ctx.fillStyle = b2; ctx.fillRect(x + 2, y + 2, w - 4, 1); }
     // Navidad: montoncito de nieve sobre el borde y carámbanos colgando (o.snow: false para sacarlo)
-    if (o.snow !== false && w > 24) {
-      for (let k = 1; k < w - 1; k++) {
-        const hh = 2 + ((k * 7 + x) % 9 === 0 ? 1 : 0) + (k > 3 && k < w - 4 ? 1 : 0);
-        ctx.fillStyle = '#f4f8ff'; ctx.fillRect(x + k, y - hh + 2, 1, hh - 1); ctx.fillStyle = '#c8d8f0'; ctx.fillRect(x + k, y + 1, 1, 1);
-      }
-      ctx.fillStyle = '#9fc4ee';
-      for (let k = 6 + ((x * 3) % 7); k < w - 4; k += 11 + ((k + x) % 5)) ctx.fillRect(x + k, y + 2, 1, 2 + ((k + x) % 3));
-    }
+    if (o.snow !== false && w > 24) ctx.drawImage(snowCap(w), x, y - 2);
   };
+  // la nieve de cada ancho de panel se dibuja una vez y se reutiliza (antes: 2 rectángulos por píxel, cada cuadro)
+  const caps = {};
+  function snowCap(w) {
+    if (caps[w]) return caps[w];
+    const c = document.createElement('canvas'); c.width = w; c.height = 9; const g = c.getContext('2d');
+    for (let k = 1; k < w - 1; k++) {
+      const hh = 2 + ((k * 7) % 9 === 0 ? 1 : 0) + (k > 3 && k < w - 4 ? 1 : 0);
+      g.fillStyle = '#f4f8ff'; g.fillRect(k, 4 - hh, 1, hh - 1); g.fillStyle = '#c8d8f0'; g.fillRect(k, 3, 1, 1);
+    }
+    g.fillStyle = '#9fc4ee';
+    for (let k = 6 + (w % 7); k < w - 4; k += 11 + (k % 5)) g.fillRect(k, 4, 1, 2 + (k % 3));
+    return (caps[w] = c);
+  }
   // botón 8-bit; devuelve el rectángulo para detectar toques
   X.button = function (label, cx, cy, w, h, o = {}) {
     const x = Math.round(cx - w / 2), y = Math.round(cy - h / 2);
