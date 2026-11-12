@@ -4,8 +4,8 @@
 // =====================================================================
 (function () {
   const U = NV.U, C = NV.CFG, FX = NV.FX;
-  const SIZE = { patovica: [22, 30], bafle: [16, 40], dron: [20, 20], chispa: [16, 26] };
-  const HP = { patovica: 2, bafle: 3, dron: 1, chispa: 2 };
+  const SIZE = { patovica: [22, 30], regalo: [16, 40], esfera: [20, 20], duende: [16, 26] };
+  const HP = { patovica: 2, regalo: 3, esfera: 1, duende: 2 };
 
   NV.Enemy = function (d) {
     const [w, h] = SIZE[d.type];
@@ -25,7 +25,7 @@
         e.vy = Math.min(e.vy + C.GRAVITY, C.MAX_FALL);
         NV.Phys.move(e, L); if (e.hitL) e.dir = 1; if (e.hitR) e.dir = -1;
         e.frame = (e.t >> 3) & 1; break;
-      case 'bafle':
+      case 'regalo':
         e.dir = dx > 0 ? 1 : -1;
         if (G.beatTick && near && Math.abs(dy) < 140) {
           const b = G.beat & 3;
@@ -35,7 +35,7 @@
         if (e.shootT > 0) e.shootT--;
         e.frame = e.shootT > 0 ? 3 : e.shootT < 0 ? 2 : (G.beat & 1);
         e.vy = Math.min(e.vy + C.GRAVITY, C.MAX_FALL); NV.Phys.move(e, L); break;
-      case 'dron': {
+      case 'esfera': {
         const bp = G.beatPos;
         const range = e.patrol ? (e.patrol[1] - e.patrol[0]) / 2 : 40;
         const mid = e.patrol ? (e.patrol[0] + e.patrol[1]) / 2 - e.w / 2 : e.home.x;
@@ -43,7 +43,7 @@
         e.dir = nx > e.x ? 1 : -1; e.x = nx; e.y = e.home.y + Math.sin(bp * Math.PI) * 6;
         e.frame = (e.t >> 3) % 3; break;
       }
-      case 'chispa':
+      case 'duende':
         e.dir = dx > 0 ? 1 : -1;
         if (G.beatTick && e.onGround && (G.beat & 1) === 0) e.vy = -3.4;
         if (G.beatTick && near && (G.beat & 3) === 1) {
@@ -56,10 +56,13 @@
     }
 
     // ---- contacto con el jugador: pisotón o daño ----
-    if (!p.dead && U.overlap(e, NV.playerBox(p))) {
+    // al caer, la caja para pisar es más ancha (el sprite es más ancho que el cuerpo): pisar se siente justo
+    const pb = NV.playerBox(p), stompBox = { x: pb.x - 5, y: pb.y, w: pb.w + 10, h: pb.h + 2 };
+    const falling = p.vy > 0.4;
+    if (!p.dead && U.overlap(e, falling ? stompBox : pb)) {
       const feetPrev = p.y + p.h - p.vy;
       if (p.shield > 0) { NV.killEnemy(e, G, 'shield'); }
-      else if (p.vy > 0.4 && feetPrev <= e.y + 8) {
+      else if (falling && feetPrev <= e.y + 10) {
         p.vy = NV.Input.held.jump ? C.STOMP_BOUNCE_HELD : C.STOMP_BOUNCE; p.airDashUsed = false; p.dashJump = false;
         p.chain++; NV.killEnemy(e, G, 'stomp');
       } else NV.hurtPlayer(p, G, ecx);
@@ -69,13 +72,24 @@
   NV.damageEnemy = function (e, G, dmg) {
     if (e.dead) return;
     e.hp -= dmg; e.flash = 5; G.sfx('hit');
+    // chispas del impacto + pequeño retroceso
+    const hx = e.x + e.w / 2 - Math.sign(e.x + e.w / 2 - G.player.x - 7) * e.w / 2;
+    FX.burst(G, hx, e.y + e.h / 2, '#ffffff', 5, 1.8, 10, 0, 1); FX.burst(G, hx, e.y + e.h / 2, G.player.hero.light, 4, 1.2, 12, 0, 2);
+    if (e.type !== 'esfera') e.x += Math.sign(e.x + e.w / 2 - G.player.x - 7) * 2;
     if (e.hp <= 0) NV.killEnemy(e, G, 'shot');
   };
+  const XMAS = ['#ff2e4a', '#33e07a', '#f5c542', '#ffffff', '#4de2ff'];
   NV.killEnemy = function (e, G, how) {
     if (e.dead) return;
     e.dead = true; const cx = e.x + e.w / 2, cy = e.y + e.h / 2;
     G.sfx(how === 'stomp' ? 'stomp' : 'kill'); G.shake(how === 'stomp' ? 3 : 2); G.hitstop = 3; G.vib(how === 'stomp' ? 18 : 10);
-    FX.boom(G, cx, cy); FX.burst(G, cx, cy, '#ffd23d', 10, 2.4, 20, 0.05, 2);
+    FX.boom(G, cx, cy);
+    // estallido navideño: nieve, estrellas doradas y papelitos de colores
+    for (let i = 0; i < 14; i++) { const a = Math.random() * Math.PI * 2, s = 1 + Math.random() * 2.6; FX.part(G, { x: cx, y: cy, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1, g: 0.08, color: XMAS[i % XMAS.length], life: 26, max: 26, size: i % 3 ? 2 : 3 }); }
+    FX.burst(G, cx, cy, '#f4f8ff', 8, 1.2, 30, -0.01, 1);
+    // el enemigo sale volando y girando (en vez de desaparecer)
+    G.corpses = G.corpses || [];
+    G.corpses.push({ type: e.type, frame: e.frame, x: cx, y: cy, h: e.h, vx: Math.sign(cx - G.player.x - 7) * 1.8, vy: how === 'stomp' ? -2 : -4.2, rot: 0, vr: (Math.random() < 0.5 ? -1 : 1) * 0.25, t: 0, flip: e.dir < 0 });
     const chain = G.player.chain || 1;
     const pts = how === 'stomp' ? C.STOMP_PTS * chain : C.KILL_PTS;
     G.score += pts; G.kills++; G.addCombo(cx, e.y);
@@ -83,15 +97,30 @@
     for (let i = 0; i < 2; i++) G.coins.push(NV.Coin(cx, cy, true));
   };
 
+  // enemigos derrotados: giran y caen fuera de pantalla
+  NV.updateCorpses = function (G) {
+    if (!G.corpses) return;
+    for (const c of G.corpses) { c.t++; c.x += c.vx; c.y += c.vy; c.vy += 0.3; c.rot += c.vr; }
+    G.corpses = G.corpses.filter((c) => c.t < 70);
+  };
+  NV.drawCorpses = function (ctx, G, cx, cy) {
+    if (!G.corpses) return;
+    for (const c of G.corpses) {
+      ctx.save(); ctx.translate(Math.round(c.x - cx), Math.round(c.y - cy)); ctx.rotate(c.rot); ctx.globalAlpha = Math.min(1, (70 - c.t) / 20);
+      NV.X.spr(c.type, c.frame, 0, c.h / 2, { flip: c.flip, flash: c.t < 4 });
+      ctx.restore();
+    }
+  };
+
   NV.drawEnemy = function (e, cx, cy) {
-    NV.X.spr(e.type, e.frame, e.x + e.w / 2 - cx, e.y + e.h - cy + (e.type === 'dron' ? 4 : 0) + (e.type === 'bafle' ? 2 : 0) + (e.type === 'patovica' ? 2 : 0) + (e.type === 'chispa' ? 1 : 0), { flip: e.dir < 0, flash: e.flash > 0 });
+    NV.X.spr(e.type, e.frame, e.x + e.w / 2 - cx, e.y + e.h - cy + (e.type === 'esfera' ? 4 : 0) + (e.type === 'regalo' ? 2 : 0) + (e.type === 'patovica' ? 2 : 0) + (e.type === 'duende' ? 1 : 0), { flip: e.dir < 0, flash: e.flash > 0 });
   };
 
   // =====================================================================
-  //  EL APAGÓN — jefe final. Ataques al ritmo (1 ataque por compás):
-  //  LÁSER de sus lentes (apunta y dispara), LLUVIA de adornos, PISOTÓN con onda.
+  //  MECHA-NOEL — jefe final (Papá Noel robot). Ataques al ritmo (1 ataque por compás):
+  //  LÁSER de sus anteojos (apunta y dispara), LLUVIA de bolas de Navidad, PISOTÓN con onda de nieve.
   // =====================================================================
-  const GM = () => window.ART_DATA.sprites.apagon;
+  const GM = () => window.ART_DATA.sprites.noel;
   NV.Boss = function (A) {
     return { cx: A.bossX, by: A.bossY, w: 84, h: 118, hp: 70, maxHp: 70, phase: 1, active: false, dead: false, deathT: 0,
       frame: 0, flash: 0, atk: 'intro', bar: -1, startBeat: 0, aims: [], beams: 0, seq: 0, hurtT: 0 };
@@ -110,7 +139,7 @@
       return;
     }
     if (!b.active) { b.frame = (G.beat & 1); return; }
-    if (b.phase === 1 && b.hp <= b.maxHp / 2) { b.phase = 2; b.blackT = 0; G.sfx('blackout'); G.shake(8); G.say('¡APAGÓN TOTAL!', { scale: 3, life: 90, color: '#ff2e4a', sub: 'SE CORTÓ LA LUZ · ATACA MÁS RÁPIDO' }); }
+    if (b.phase === 1 && b.hp <= b.maxHp / 2) { b.phase = 2; b.blackT = 0; G.sfx('blackout'); G.shake(8); G.say('¡SE CORTÓ LA NAVIDAD!', { scale: 3, life: 90, color: '#ff2e4a', sub: 'SE APAGARON LAS LUCES · ATACA MÁS RÁPIDO' }); }
     if (b.phase === 2) b.blackT = (b.blackT || 0) + 1;
 
     // ---- elegir ataque al comienzo de cada compás ----
@@ -202,7 +231,7 @@
     }
     if (b.dead && b.deathT > 130) return;
     const glow = b.atk === 'rest' && !b.dead;
-    X.spr('apagon', b.frame, b.cx - cx, b.by - cy, { flash: b.flash > 0 || (b.dead && (G.frame >> 1) % 2 && b.deathT < 110) });
+    X.spr('noel', b.frame, b.cx - cx, b.by - cy, { flash: b.flash > 0 || (b.dead && (G.frame >> 1) % 2 && b.deathT < 110) });
     if (glow) { const m = GM(); ctx.save(); ctx.fillStyle = '#9dffbf'; ctx.globalAlpha = 0.5 + 0.5 * Math.sin(G.frame * 0.4); NV.Input.circ(ctx, b.cx - m.w / 2 + m.core[0] - cx, b.by - m.h + m.core[1] - cy, 7); ctx.restore(); }
     if (b.dead) return;
     // brillo de los ojos y arcos eléctricos entre los aisladores (más intensos en el apagón total)
@@ -222,7 +251,7 @@
     }
     ctx.restore();
   };
-  // APAGÓN TOTAL (fase 2): se corta la luz del lugar; queda un círculo de luz alrededor del DJ
+  // SE CORTÓ LA NAVIDAD (fase 2): se apagan las luces; queda un círculo de luz alrededor del DJ
   // y los ojos del jefe. Oscurece solo el escenario: jefe, ataques y avisos se dibujan encima.
   NV.drawBlackout = function (ctx, G, cx, cy) {
     const b = G.boss; if (!b || b.phase !== 2 || b.dead) return;

@@ -3,7 +3,7 @@
 //  Todos los números del juego están acá para ajustarlos sin tocar la lógica.
 // =====================================================================
 window.NV = window.NV || {};
-NV.VERSION = '9dj-2'; // cambiarlo en cada actualización del arte o la música (rompe la caché del navegador)
+NV.VERSION = 'navidad-1'; // cambiarlo en cada actualización del arte o la música (rompe la caché del navegador)
 
 NV.CFG = {
   // ---------- Pantalla ----------
@@ -17,21 +17,21 @@ NV.CFG = {
 
   // ---------- Jugador (iguales para los 3 personajes) ----------
   HP: 4,
-  RUN: 2.1,
-  GRAVITY: 0.28,
-  MAX_FALL: 6,
-  JUMP_VEL: -5.9,
-  JUMP_CUT: -2,
-  STOMP_BOUNCE: -4.6,
-  STOMP_BOUNCE_HELD: -6.4,
+  RUN: 2.5,            // más rápido = más frenético
+  GRAVITY: 0.32,
+  MAX_FALL: 7,
+  JUMP_VEL: -7.0,       // salto máx ≈ 76 px (4,7 tiles): todas las plataformas quedan a mano
+  JUMP_CUT: -2.6,
+  STOMP_BOUNCE: -5.4,
+  STOMP_BOUNCE_HELD: -7.6,
   COYOTE: 7,
   JUMP_BUFFER: 8,
-  DASH_FRAMES: 16,
-  DASH_SPEED: 4.3,
+  DASH_FRAMES: 14,
+  DASH_SPEED: 5.2,
   INVULN: 70,
-  SHOT_COOLDOWN: 9,       // mantener DISPARO = ráfaga automática
-  SHOT_SPEED: 6.5,
-  SHOT_LIFE: 46,          // alcance ≈ 300 px
+  SHOT_COOLDOWN: 8,       // mantener DISPARO = ráfaga automática
+  SHOT_SPEED: 8.5,
+  SHOT_LIFE: 38,          // alcance ≈ 320 px
   SHOT_DMG: 1,
   SHOT_MAX: 4,
   SHIELD_TIME: 8 * 60,    // el escudo te hace inmune 8 s y después se rompe
@@ -42,7 +42,7 @@ NV.CFG = {
   FEVER_SPEED: 1.22,      // multiplicador de velocidad durante la FIEBRE
 
   // ---------- Medallas por tiempo (segundos): ajustarlas cuando haya tiempos reales ----------
-  MEDALS: [['S', 60, '#f5c542'], ['A', 75, '#4de2ff'], ['B', 95, '#33e07a'], ['C', Infinity, '#8ea2c4']],
+  MEDALS: [['S', 52, '#f5c542'], ['A', 65, '#4de2ff'], ['B', 85, '#33e07a'], ['C', Infinity, '#8ea2c4']],
 
   // ---------- Puntaje (las B-Coins solo suman puntos y desempatan) ----------
   COIN_PTS: 100,

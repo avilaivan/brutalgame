@@ -8,7 +8,7 @@
   const ci = (n, len = COLS.length) => COLS[(((Math.floor(n) % len) + len) % len)];
   let snow = [];
   S.init = function () {
-    snow = []; for (let i = 0; i < 90; i++) snow.push({ x: Math.random() * 800, y: Math.random() * 360, s: 0.3 + Math.random(), z: 0.3 + Math.random() * 0.7 });
+    snow = []; for (let i = 0; i < 150; i++) snow.push({ x: Math.random() * 800, y: Math.random() * 360, s: 0.3 + Math.random(), z: 0.3 + Math.random() * 0.7 });
   };
   const hash = (x, y) => ((x * 73856093) ^ (y * 19349663)) >>> 0;
 
@@ -146,7 +146,7 @@
   };
 
   // Color de cada zona: tiñe solo el fondo (no los tiles ni personajes) y cambia suave al avanzar
-  const ZONE_TINT = [[77, 226, 255], [255, 79, 216], [255, 46, 74], [77, 141, 255]]; // ruta 5, centro, autódromo, jefe
+  const ZONE_TINT = [[120, 200, 255], [245, 197, 66], [255, 46, 74], [51, 224, 122]]; // ruta 5 nevada, centro navideño, autódromo, jefe
   let tint = ZONE_TINT[0].slice();
   S.drawTint = function (ctx, G) {
     const L = G.L, p = G.player; if (!L || !p) return;
@@ -179,6 +179,17 @@
         ctx.fillRect(x - sh, y + hr + 5, sh * 2, 80);  // torso
         ctx.fillRect(x - 2, y + hr - 2, 5, 8);         // cuello
         NV.Input.circ(ctx, x, y, hr);                  // cabeza
+        // gorros de Papá Noel y vinchas de reno (con la luz del escenario)
+        if (h % 3 === 0) {
+          const hc = row.s === 1 ? '#b3132b' : '#5c0815', fur = row.s === 1 ? '#f4f8ff' : '#7a86a0';
+          ctx.fillStyle = hc; ctx.beginPath(); ctx.moveTo(x - hr, y - hr + 2); ctx.lineTo(x + hr, y - hr + 2); ctx.lineTo(x + hr + 4, y - hr * 2 - 2); ctx.closePath(); ctx.fill();
+          X.rect(x - hr, y - hr + 1, hr * 2, 2, fur); X.rect(x + hr + 2, y - hr * 2 - 4, 3, 3, fur);
+          ctx.fillStyle = row.col;
+        } else if (h % 7 === 1) {
+          const ac = row.s === 1 ? '#7a4a35' : '#3a2420';
+          X.rect(x - hr - 1, y - hr - 5, 2, 6, ac); X.rect(x - hr - 3, y - hr - 5, 2, 2, ac); X.rect(x + hr - 1, y - hr - 5, 2, 6, ac); X.rect(x + hr + 1, y - hr - 5, 2, 2, ac);
+          ctx.fillStyle = row.col;
+        }
         // luz de los cabezales en el borde de la cabeza y hombros
         ctx.globalAlpha = row.s === 1 ? 0.9 : 0.5;
         X.rect(x - hr + 2, y - hr, hr * 2 - 3, 1, rim); X.rect(x - sh + 2, y + hr + 1, 4, 1, rim); X.rect(x + sh - 6, y + hr + 1, 4, 1, rim);
@@ -190,17 +201,19 @@
     }
   };
 
-  // Papel picado de la fiesta (en diciembre en 9 de Julio es verano: nada de nieve).
-  // Cada papelito gira: alterna entre ancho y fino.
-  const CONF = ['#ff2e4a', '#f5c542', '#4de2ff', '#ff4fd8', '#33e07a', '#ffffff'];
+  // Nieve navideña en 3 profundidades: copos lejanos (1px), medios (2px) y cercanos con forma
+  // de cristal (cruz) que brillan de a ratos. Se mueven con el viento y con la cámara.
   S.drawSnow = function (ctx, camX) {
-    const W = NV.X.W;
+    const W = NV.X.W, wind = Math.sin(performance.now() / 2400) * 0.25;
     snow.forEach((s, i) => {
-      s.y += s.s * 0.45; if (s.y > 362) s.y = -2;
-      let x = (s.x + Math.sin((s.y + s.x) * 0.02) * 8 - camX * s.z * 0.35) % W; if (x < 0) x += W;
-      ctx.globalAlpha = 0.45 + s.z * 0.5; ctx.fillStyle = CONF[i % CONF.length];
-      const flip = Math.sin(s.y * 0.15 + i) > 0, big = s.z > 0.7;
-      ctx.fillRect(Math.round(x), Math.round(s.y), flip ? (big ? 3 : 2) : 1, big ? 2 : 1);
+      s.y += s.s * (0.35 + s.z * 0.5); s.x += wind * s.z; if (s.y > 362) { s.y = -4; s.x = Math.random() * 800; }
+      let x = (s.x + Math.sin((s.y + i * 13) * 0.03) * 6 - camX * s.z * 0.45) % W; if (x < 0) x += W;
+      const X0 = Math.round(x), Y0 = Math.round(s.y);
+      ctx.globalAlpha = 0.4 + s.z * 0.6; ctx.fillStyle = '#f4f8ff';
+      if (s.z > 0.82) { // cristal
+        ctx.fillRect(X0 - 1, Y0, 3, 1); ctx.fillRect(X0, Y0 - 1, 1, 3);
+        if ((i + (performance.now() >> 7)) % 23 === 0) { ctx.fillStyle = '#ffffff'; ctx.fillRect(X0 - 2, Y0, 5, 1); ctx.fillRect(X0, Y0 - 2, 1, 5); }
+      } else ctx.fillRect(X0, Y0, s.z > 0.55 ? 2 : 1, s.z > 0.55 ? 2 : 1);
     });
     ctx.globalAlpha = 1;
   };

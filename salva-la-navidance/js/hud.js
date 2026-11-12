@@ -19,7 +19,7 @@
 
     // ---------- cronómetro ----------
     const beatPulse = G.phase < 0.12 ? 1 : 0;
-    X.panel(W / 2 - 86, 4, 172, 50, { border: beatPulse ? hero.color : '#3a4466' });
+    X.panel(W / 2 - 96, 4, 192, 50, { border: beatPulse ? hero.color : '#3a4466' });
     const t = G.runTime;
     const warn = NV.CFG.TIME_LIMIT - t < 20;
     X.text(NV.U.fmtTime(t), W / 2, 10, { scale: 3, align: 'center', color: warn && (G.frame >> 3) % 2 ? '#ff2e4a' : '#ffffff' });
@@ -57,10 +57,10 @@
       X.text('★', bx + bw + 4, by - 4, { color: '#f5c542', shadow: false });
     } else if (G.boss) {
       const b = G.boss, bw = 200, bx = W / 2 - bw / 2, by = 60;
-      X.text('EL APAGÓN', bx, by - 1, { color: '#4de2ff', outline: true });
+      X.text('MECHA-NOEL', bx, by - 1, { color: '#ff2e4a', outline: true });
       X.panel(bx, by + 9, bw, 10, { light: false });
       const fw = Math.round((bw - 4) * b.hp / b.maxHp);
-      X.rect(bx + 2, by + 11, fw, 6, b.phase === 2 ? '#ff2e4a' : '#4de2ff'); X.rect(bx + 2, by + 11, fw, 1, '#ffffff');
+      X.rect(bx + 2, by + 11, fw, 6, b.phase === 2 ? '#ff2e4a' : '#33e07a'); X.rect(bx + 2, by + 11, fw, 1, '#ffffff');
     }
 
     // ---------- avisos ----------

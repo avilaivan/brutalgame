@@ -70,9 +70,10 @@
     if (!locked && IN.held.shoot && p.shootCd === 0 && p.hurt === 0) {
       const mine = G.bullets.filter((b) => b.mine).length;
       if (mine < C.SHOT_MAX) {
-        G.bullets.push({ mine: true, x: p.x + 7 + p.dir * 18, y: p.y + p.h - 27, vx: p.dir * C.SHOT_SPEED, vy: 0, r: 4, life: C.SHOT_LIFE, dmg: C.SHOT_DMG, kind: 'shot_' + p.key, t: 0 });
+        // sale pegado al cañón (si sale 18 px adelante, a quemarropa pasa de largo) y a media altura del cuerpo
+        G.bullets.push({ mine: true, x: p.x + 7 + p.dir * 6, y: p.y + p.h - 24, vx: p.dir * C.SHOT_SPEED, vy: 0, r: 6, life: C.SHOT_LIFE, dmg: C.SHOT_DMG, kind: 'shot_' + p.key, t: 0 });
         p.shootCd = C.SHOT_COOLDOWN; p.shootPose = 14; G.sfx('shoot');
-        FX.part(G, { x: p.x + 7 + p.dir * 20, y: p.y + p.h - 27, color: '#ffffff', life: 4, max: 4, size: 3 });
+        G.muzzle = { x: p.x + 7 + p.dir * 16, y: p.y + p.h - 24, t: 5, c: p.hero.light };
       }
     }
 

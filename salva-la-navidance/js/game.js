@@ -33,7 +33,7 @@
     G.enemies = G.L.enemies.map((d) => NV.Enemy(d));
     G.coins = G.L.coins.map((c) => NV.Coin(c.x, c.y, false));
     G.items = G.L.items.map((i) => NV.Item(i.type, i.x, i.y));
-    G.bullets = []; G.parts = []; G.booms = []; G.texts = []; G.marks = [];
+    G.bullets = []; G.parts = []; G.booms = []; G.texts = []; G.marks = []; G.corpses = [];
     G.cp = 0; G.runTime = 0; G.running = false; G.finished = false; G.finishT = 0;
     G.coinsGot = 0; G.score = 0; G.kills = 0; G.deaths = 0; G.splits = [];
     G.bossOn = false; G.boss = null; G.banner = null; G.paused = false; G.vsT = 0; G.hype = 0; G.combo = 0; G.comboT = 0; G.gIdx = 0; G.gDelta = null; G.coinPop = 0; G.hpLost = 0; G.tip = (G.tip || Math.floor(Math.random() * 9)) + 1;
@@ -72,7 +72,7 @@
     G.combo = (G.comboT > 0 ? G.combo : 0) + 1; G.comboT = C.COMBO_TIME;
     if (G.combo >= 2) FX.text(G, 'COMBO x' + G.combo, x, y - 18, G.combo >= C.FEVER_AT ? '#ff4fd8' : '#4de2ff', 1, 40);
     if (G.combo === C.FEVER_AT) {
-      G.sfx('fever'); G.hype = 150; G.flash('#ff4fd8', 6); G.vib([20, 30, 20]);
+      G.sfx('fever'); G.sfx('jingle'); G.hype = 150; G.flash('#ff4fd8', 6); G.vib([20, 30, 20]);
       G.say('¡FIEBRE BRUTAL!', { scale: 3, life: 70, color: '#ff4fd8', sub: 'MÁS VELOCIDAD MIENTRAS SIGAS EL COMBO' });
     }
     if (G.combo > C.FEVER_AT) G.score += 100 * G.combo;
@@ -81,6 +81,7 @@
 
   G.getCoin = function (x, y) {
     G.coinsGot++; G.score += C.COIN_PTS; G.sfx('coin'); G.coinPop = 8;
+    for (let i = 0; i < 4; i++) FX.part(G, { x: x + U.rand(-5, 5), y: y + U.rand(-5, 5), vx: U.rand(-0.6, 0.6), vy: U.rand(-1.4, -0.4), color: i % 2 ? '#fff3c4' : '#f5c542', life: 16, max: 16, size: i ? 1 : 2 });
     FX.part(G, { x, y, vx: 0, vy: -0.6, color: '#fff3c4', life: 8, max: 8, size: 3 });
   };
   G.getItem = function (it) {
@@ -127,7 +128,7 @@
         const n = 4 - (G.beat - G.countBeat);
         if (G.beatTick) { if (n > 0) { G.sfx('beep'); G.say(String(n), { scale: 6, life: 26, color: p.hero.light }); } else { G.sfx('go'); G.running = true; G.t0 = performance.now();
           // el servidor anota la largada: el tiempo final tiene que coincidir con su reloj
-          const pid = G.profile.id; G.tokenP.then((t) => NV.DB.go(t, pid)); G.say('¡YA!', { scale: 6, life: 40, color: '#f5c542', sub: 'LLEGÁ AL APAGÓN Y DEVOLVÉ LA LUZ', subColor: '#ffffff' }); } }
+          const pid = G.profile.id; G.tokenP.then((t) => NV.DB.go(t, pid)); G.say('¡YA!', { scale: 6, life: 40, color: '#f5c542', sub: 'LLEGÁ A MECHA-NOEL Y SALVÁ LA NAVIDANCE', subColor: '#ffffff' }); } }
       }
     }
     if (G.running) {
@@ -139,7 +140,7 @@
     if (G.banner) { G.banner.t++; if (--G.banner.life <= 0) G.banner = null; }
     if (G.vsT) {
       if (++G.vsT === 18) { G.sfx('slam'); G.shake(6); G.vib(60); }
-      if (G.vsT === 100) G.say('¡EL APAGÓN!', { scale: 3, life: 100, color: '#ff2e4a', sub: 'QUIERE CORTAR LA FIESTA · ESQUIVÁ SUS LÁSERES' });
+      if (G.vsT === 100) G.say('¡MECHA-NOEL!', { scale: 3, life: 100, color: '#ff2e4a', sub: 'QUIERE ROBARSE LA NAVIDANCE · ESQUIVÁ SUS LÁSERES' });
       if (G.vsT > 112) G.vsT = 0;
     }
 
@@ -160,7 +161,7 @@
     for (let i = G.cp + 1; i < L.checkpoints.length; i++) {
       const c = L.checkpoints[i];
       if (p.x > c.x && !p.dead) {
-        G.cp = i; G.splits[i] = G.runTime; G.sfx('checkpoint');
+        G.cp = i; G.splits[i] = G.runTime; G.sfx('checkpoint'); G.sfx('jingle');
         const pbS = NV.DB.splits()[i]; let sub = U.fmtTime(G.runTime), sc = '#ffffff';
         if (pbS) { const d = G.runTime - pbS; sub += '  ' + (d < 0 ? '-' : '+') + Math.abs(d).toFixed(2); sc = d < 0 ? '#33e07a' : '#ff2e4a'; }
         G.say(c.label, { sub, subColor: sc, life: 100 }); G.hype = 50;
@@ -185,7 +186,7 @@
     for (const c of G.coins) NV.updateCoin(c, G); G.coins = G.coins.filter((c) => !c.dead);
     for (const it of G.items) NV.updateItem(it, G); G.items = G.items.filter((i) => !i.dead);
     for (const m of G.marks) m.life--; G.marks = G.marks.filter((m) => m.life > 0);
-    FX.update(G);
+    FX.update(G); NV.updateCorpses(G);
     updateCamera();
   }
 
@@ -252,17 +253,36 @@
     for (const it of G.items) NV.drawItem(it, cx, cy, G);
     for (const c of G.coins) NV.drawCoin(c, cx, cy, G.frame);
     for (const e of G.enemies) if (e.x - cx > -40 && e.x - cx < W + 40) NV.drawEnemy(e, cx, cy);
+    NV.drawCorpses(ctx, G, cx, cy);
     if (G.boss) NV.drawBoss(ctx, G.boss, G, cx, cy);
     // ghost de tu mejor partida: silueta blanca translúcida
     const gs = G.ghost && (G.running || G.finished) && G.ghost.f[Math.floor(G.runTime * 30)];
     if (gs) X.hero(G.ghost.hero, gs[2], gs[3], gs[0] + 7 - cx, gs[1] + G.player.h - cy, gs[4] < 0, true, 0.3);
     NV.drawPlayer(ctx, G.player, G, cx, cy);
+    // disparos del DJ: estela + halo de luz (se tienen que ver siempre, sobre cualquier fondo)
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (const b of G.bullets) {
+      if (!b.mine) continue;
+      const x = b.x - cx, y = b.y - cy, d = Math.sign(b.vx), col = G.player.hero.color;
+      for (let k = 1; k <= 4; k++) { ctx.globalAlpha = 0.28 - k * 0.05; X.rect(x - d * k * 6 - 3, y - 2, 6, 4, col); }
+      const g = ctx.createRadialGradient(x, y, 0, x, y, 12); g.addColorStop(0, 'rgba(255,255,255,.9)'); g.addColorStop(0.35, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = 0.8; ctx.fillStyle = g; ctx.fillRect(x - 12, y - 12, 24, 24);
+    }
+    if (G.muzzle && G.muzzle.t > 0) { const m = G.muzzle; ctx.globalAlpha = m.t / 5; ctx.fillStyle = '#ffffff'; NV.Input.circ(ctx, m.x - cx, m.y - cy, 2 + m.t); ctx.fillStyle = m.c; NV.Input.circ(ctx, m.x - cx, m.y - cy, 1 + (m.t >> 1)); m.t--; }
+    ctx.restore();
+    for (const b of G.bullets) {
+      if (b.mine) { X.spr(b.kind, (b.t >> 2) & 1, b.x - cx, b.y - cy + 6, { flip: b.vx < 0, scale: 1.5 }); continue; }
       if (b.kind === 'ornament') X.spr('ornament', (b.green ? 2 : 0) + ((G.frame >> 3) & 1), b.x - cx, b.y - cy + 6);
       else if (b.kind === 'wave') X.spr('wave', (G.frame >> 3) & 1, b.x - cx, b.y - cy + 8);
       else X.spr(b.kind, (b.t >> 2) & 1, b.x - cx, b.y - cy + (b.kind === 'elaser' ? 2 : 4), { flip: b.vx < 0 });
     }
     FX.draw(ctx, G, cx, cy);
+    // líneas de velocidad en el dash y en la FIEBRE
+    if ((G.player.dash > 0 || G.fever()) && !G.player.dead) {
+      ctx.save(); ctx.globalAlpha = G.fever() ? 0.35 : 0.22; ctx.fillStyle = G.fever() ? ['#ff2e4a', '#33e07a', '#f5c542', '#ffffff'][(G.frame >> 2) % 4] : '#ffffff';
+      for (let i = 0; i < 9; i++) { const ly = (i * 41 + G.frame * 3) % 300 + 40, lx = (i * 97 - G.frame * 22 * (G.player.dir || 1)) % (W + 120); ctx.fillRect(((lx % (W + 120)) + W + 120) % (W + 120) - 60, ly, 40 + (i % 3) * 20, 1); }
+      ctx.restore();
+    }
     NV.Stage.drawCrowd(ctx, G, cx);
     NV.Stage.drawSnow(ctx, cx);
     FX.drawTexts(G, cx, cy);
@@ -286,14 +306,14 @@
     'PISÁ ENEMIGOS: REBOTÁS Y NO PERDÉS VELOCIDAD',
     'EL DASH TAMBIÉN FUNCIONA EN EL AIRE',
     'DASH + SALTO = SALTO LARGO Y RÁPIDO',
-    'CUANDO LA PALANCA DEL APAGÓN BRILLA, RECIBE DOBLE DAÑO',
+    'CUANDO LA HEBILLA DE MECHA-NOEL BRILLA, RECIBE DOBLE DAÑO',
     'HAY 2 MEGA B-COINS ESCONDIDAS EN EL NIVEL',
     'CON EL ESCUDO DORADO ROMPÉS ENEMIGOS AL TOCARLOS',
     'LA SILUETA BLANCA ES TU MEJOR PARTIDA: ¡GANALE!',
     'EL JEFE ATACA AL RITMO: ESCUCHÁ LA CANCIÓN',
   ];
 
-  // Presentación del jefe: tu DJ entra por la izquierda, el Apagón por la derecha, "VS" en el medio
+  // Presentación del jefe: tu DJ entra por la izquierda, Mecha-Noel por la derecha, "VS" en el medio
   function drawVS(ctx) {
     const W = X.W, t = G.vsT, h = G.player.hero;
     const ease = (v) => 1 - Math.pow(1 - U.clamp(v, 0, 1), 3);
@@ -309,9 +329,9 @@
     };
     const lx = -slide, rx = slide;
     band(lx - 20, lx + W / 2 - 12, h.dark, X.img[G.heroKey + '_portrait'], lx + W / 2 - 230, 210, 210, false);
-    band(rx + W / 2 + 12, rx + W + 60, '#3a0a12', X.img.apagon_card, rx + W / 2 + 30, 220, 212, false);
+    band(rx + W / 2 + 12, rx + W + 60, '#3a0a12', X.img.noel_card, rx + W / 2 + 30, 220, 212, false);
     X.text(h.name, lx + 30, 296, { scale: 2, color: h.light, outline: true });
-    X.text('EL APAGÓN', rx + W - 30, 296, { scale: 2, align: 'right', color: '#ff2e4a', outline: true });
+    X.text('MECHA-NOEL', rx + W - 30, 296, { scale: 2, align: 'right', color: '#ff2e4a', outline: true });
     if (t > 14 && out < 1) {
       const pop = Math.max(1, 2.2 - (t - 14) * 0.15);
       ctx.save(); ctx.translate(W / 2, 168); ctx.scale(pop, pop); ctx.globalAlpha = 1 - out;
@@ -325,7 +345,9 @@
   const BOT = params.get('bot');
   function bot() {
     const f = G.frame, b = IN.bot;
-    b.right = true; b.shoot = true; b.jump = f % 50 < 18; b.dash = f % 140 < 10;
+    b.right = true; b.left = false; b.shoot = true; b.jump = f % 50 < 18; b.dash = f % 140 < 10;
+    // en la arena: se queda a la izquierda del jefe, mirándolo, y salta para pegarle
+    if (G.bossOn && G.boss && G.player) { const px = G.player.x; b.right = px < G.boss.cx - 150; b.left = px > G.boss.cx - 110; b.dash = false; if (!b.left && !b.right && f % 20 < 2) b.right = true; }
     if (G.state !== 'play') b.confirm = f % 30 < 2;
   }
   function update() {
