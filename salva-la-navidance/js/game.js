@@ -13,9 +13,10 @@
   G.banner = null;
   G.say = (s, o = {}) => { G.banner = Object.assign({ s, t: 0, life: o.life || 110 }, o); };
 
+  const FADE = 10; // cuadros del fundido desde negro al cambiar de pantalla
   G.go = function (s) {
     const prev = NV.Screens[G.state]; if (prev && prev.leave) prev.leave(G);
-    G.state = s; IN.clear(); G.mi = 0; IN.touchOn = false;
+    G.state = s; IN.clear(); G.mi = 0; IN.touchOn = false; G.fadeT = FADE;
     const sc = NV.Screens[s]; if (sc && sc.enter) sc.enter(G);
     document.body.classList.toggle('in-register', s === 'register');
   };
@@ -35,7 +36,8 @@
     G.bossOn = false; G.boss = null; G.banner = null; G.paused = false;
     const c0 = G.L.checkpoints[0];
     G.player = NV.Player(hero, c0.x, c0.y);
-    G.camX = 0; G.state = 'play'; IN.clear(); IN.touchOn = true; document.body.classList.remove('in-register');
+    G.ghostRec = []; G.ghost = NV.DB.ghost();
+    G.camX = 0; G.state = 'play'; G.fadeT = FADE; IN.clear(); IN.touchOn = true; document.body.classList.remove('in-register');
     // la canción del personaje arranca desde el principio; cuenta regresiva de 4 beats
     A.play(hero, 0);
     G.countBeat = null; G.count = 0;
@@ -76,7 +78,7 @@
     G.finished = true; G.running = false; G.finishT = 0;
     const time = Math.round(G.runTime * 1000) / 1000;
     const prevBest = NV.DB.best(); const pb = !prevBest || time < prevBest;
-    if (pb) { NV.DB.setBest(time); NV.DB.setSplits(G.splits); }
+    if (pb) { NV.DB.setBest(time); NV.DB.setSplits(G.splits); NV.DB.setGhost({ hero: G.heroKey, f: G.ghostRec }); }
     G.result = { hero: G.heroKey, time, coins: G.coinsGot, deaths: G.deaths, score: G.score, pb, prevBest };
     G.say('¡NAVIDANCE SALVADA!', { scale: 3, life: 220, sub: U.fmtTime(time), subColor: '#ffffff' });
     G.sfx('win');
@@ -97,6 +99,8 @@
     if (G.paused) return;
     if (IN.pressed('pause')) { G.paused = true; G.mi = 0; A.pause(); IN.clear(); return; }
     if (G.pauseTap) { G.pauseTap = false; G.paused = true; G.mi = 0; A.pause(); IN.clear(); return; }
+    // reinicio instantáneo (R / Select): clave en una carrera contra el reloj
+    if (IN.pressed('restart') && !G.finished) { G.startRun(G.heroKey); return; }
 
     // cuenta regresiva sincronizada con la canción
     if (!G.running && !G.finished) {
@@ -119,6 +123,8 @@
     if (G.hitstop > 0) { G.hitstop--; return; }
 
     NV.updatePlayer(p, G, !G.running && !G.finished);
+    // grabar el recorrido para el ghost (30 muestras por segundo; 0 = muerto/invisible)
+    if (G.running) for (const gi = Math.floor(G.runTime * 30); G.ghostRec.length <= gi;) G.ghostRec.push(p.dead ? 0 : [Math.round(p.x), Math.round(p.y), p.anim, p.frame, p.dir]);
 
     // checkpoints (con tiempo parcial vs tu mejor)
     for (let i = G.cp + 1; i < L.checkpoints.length; i++) {
@@ -215,6 +221,9 @@
     for (const c of G.coins) NV.drawCoin(c, cx, cy, G.frame);
     for (const e of G.enemies) if (e.x - cx > -40 && e.x - cx < W + 40) NV.drawEnemy(e, cx, cy);
     if (G.boss) NV.drawBoss(ctx, G.boss, G, cx, cy);
+    // ghost de tu mejor partida: silueta blanca translúcida
+    const gs = G.ghost && (G.running || G.finished) && G.ghost.f[Math.floor(G.runTime * 30)];
+    if (gs) X.hero(G.ghost.hero, gs[2], gs[3], gs[0] + 7 - cx, gs[1] + G.player.h - cy, gs[4] < 0, true, 0.3);
     NV.drawPlayer(ctx, G.player, G, cx, cy);
     for (const b of G.bullets) {
       if (b.kind === 'ornament') X.spr('ornament', (b.green ? 2 : 0) + ((G.frame >> 3) & 1), b.x - cx, b.y - cy + 6);
@@ -226,6 +235,8 @@
     FX.drawTexts(G, cx, cy);
     if (G.flashT > 0) { ctx.globalAlpha = G.flashT / 18; ctx.fillStyle = G.flashC; ctx.fillRect(0, 0, W, 360); ctx.globalAlpha = 1; G.flashT--; }
     NV.HUD.draw(ctx, G);
+    // controles durante la cuenta regresiva (en celular los botones ya tienen nombre)
+    if (!G.running && !G.finished && !IN.isTouch) { X.rect(W / 2 - 170, 216, 340, 18, 'rgba(5,4,12,.8)'); X.text('◀ ▶ MOVER · Z SALTAR · X DISPARAR · C DASH · R REINICIAR', W / 2, 221, { align: 'center', color: '#ffffff' }); }
     if (IN.isTouch && !G.paused) { const r = X.button('II', W - 20, 64, 26, 20, { scale: 1 }); if (IN.inRect(G.tapThisFrame, r)) G.pauseTap = true; }
     if (G.paused) NV.Screens.pause(ctx, G);
   }
@@ -254,6 +265,7 @@
       X.text('CARGANDO ' + Math.round((X.loaded / Math.max(1, X.total)) * 100) + '%', X.W / 2, 170, { scale: 2, align: 'center', color: '#f5c542' });
     } else if (G.state === 'play') drawPlay(ctx);
     else if (NV.Screens[G.state]) NV.Screens[G.state].draw(ctx, G);
+    if (G.fadeT > 0) { ctx.fillStyle = 'rgba(7,6,11,' + G.fadeT / FADE + ')'; ctx.fillRect(0, 0, X.W, 360); G.fadeT--; }
     if (G.err && (BOT || params.has('debug'))) { X.rect(0, 0, X.W, 12, '#000'); X.text(G.err, 2, 2, { color: '#ff2e4a' }); }
     X.present();
   }

@@ -29,6 +29,9 @@
   DB.setBest = function (t) { localStorage.setItem('navidance_pb', String(t)); };
   DB.splits = function () { try { return JSON.parse(localStorage.getItem('navidance_splits') || '[]'); } catch (e) { return []; } };
   DB.setSplits = function (s) { localStorage.setItem('navidance_splits', JSON.stringify(s)); };
+  // ghost: recorrido de tu mejor partida ({ hero, f: [[x, y, anim, frame, dir] | 0, ...] a 30 muestras por segundo })
+  DB.ghost = function () { try { return JSON.parse(localStorage.getItem('navidance_ghost') || 'null'); } catch (e) { return null; } };
+  DB.setGhost = function (g) { try { localStorage.setItem('navidance_ghost', JSON.stringify(g)); } catch (e) {} };
 
   // ---------- inicio de partida (token anti-trampa en el servidor) ----------
   DB.startRun = async function (profile, hero) {
