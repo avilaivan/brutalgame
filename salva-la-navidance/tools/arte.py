@@ -2,7 +2,7 @@
 #  GENERADOR DE ARTE 8-BIT — Salva la Navidance · BRUTAL. (9 de Julio)
 #  Dibuja píxel por píxel (sin IA) el fondo de la ciudad de 9 de Julio,
 #  en Navidad (nieve, luces, árbol de la plaza), los tiles, los enemigos
-#  navideños y el jefe MECHA-NOEL, y escribe sus metadatos
+#  navideños, y escribe sus metadatos (el jefe Don Gruñón lo arma tools/jefe.py)
 #  en js/data/art-data.js.
 #
 #     python tools/arte.py
@@ -694,13 +694,11 @@ def main():
     sheet([regalo(i) for i in range(4)]).save(os.path.join(SP, 'regalo.png'))
     sheet([esfera(i) for i in range(3)]).save(os.path.join(SP, 'esfera.png'))
     sheet([duende(i) for i in range(3)]).save(os.path.join(SP, 'duende.png'))
-    sheet([noel(i) for i in range(6)]).save(os.path.join(SP, 'noel.png'))
     sheet([bola(i) for i in range(4)]).save(os.path.join(SP, 'ornament.png'))
     sheet([onda_nieve(i) for i in range(2)]).save(os.path.join(SP, 'wave.png'))
     baston().save(os.path.join(SP, 'elaser.png'))
     for k, col, light in (('ivan', P['red'], hx('ff9aa8')), ('hades', hx('4d8dff'), hx('b4cdff')), ('matias', P['green'], hx('a8ffc8'))):
         disparo(col, light).save(os.path.join(SP, 'shot_' + k + '.png'))
-    noel_card()
     for old in ('bafle', 'dron', 'chispa', 'apagon'):
         p = os.path.join(SP, old + '.png')
         if os.path.exists(p): os.remove(p)
@@ -711,9 +709,9 @@ def main():
     src = open(path, encoding='utf-8').read()
     data = json.loads(re.search(r'window\.ART_DATA=(\{.*\});?\s*$', src, re.S).group(1))
     spr = data['sprites']
-    for k in ('snowman', 'nutcracker', 'skull', 'elf', 'grinch', 'bafle', 'dron', 'chispa', 'apagon'): spr.pop(k, None)
+    for k in ('snowman', 'nutcracker', 'skull', 'elf', 'grinch', 'bafle', 'dron', 'chispa', 'apagon', 'noel'): spr.pop(k, None)
     spr.update({'patovica': {'w': 30, 'h': 34, 'n': 2}, 'regalo': {'w': 30, 'h': 44, 'n': 4}, 'esfera': {'w': 30, 'h': 28, 'n': 3},
-                'duende': {'w': 24, 'h': 30, 'n': 3}, 'noel': {'w': 150, 'h': 132, 'n': 6, 'lensL': list(LENS_L), 'lensR': list(LENS_R), 'core': list(CORE)}})
+                'duende': {'w': 24, 'h': 30, 'n': 3}})
     data['deco']['speaker'] = [32, 64]; data['deco']['console'] = [32, 32]
     data['lights'] = {'far_blink': fb, 'mid_bulbs': mb + xmas_bulbs, 'mid_neon': mn, 'near_consoles': nc}
     open(path, 'w', encoding='utf-8').write('// Metadatos del arte 8-bit (generado por tools/arte.py)\nwindow.ART_DATA=' + json.dumps(data, ensure_ascii=False) + ';\n')

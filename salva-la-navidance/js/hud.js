@@ -69,7 +69,7 @@
       X.text('★', bx + bw + 4, by - 4, { color: '#f5c542', shadow: false });
     } else if (G.boss) {
       const b = G.boss, bw = 200, bx = W / 2 - bw / 2, by = 60;
-      X.text('MECHA-NOEL', bx, by - 1, { color: '#ff2e4a', outline: true });
+      X.text('DON GRUÑÓN', bx, by - 1, { color: '#ff2e4a', outline: true });
       X.panel(bx, by + 9, bw, 10, { light: false });
       const fw = Math.round((bw - 4) * b.hp / b.maxHp);
       G.bossShow = Math.max(b.hp, (G.bossShow === undefined ? b.hp : G.bossShow) - 0.35); // estela blanca del daño reciente

@@ -107,20 +107,20 @@
       // 2) se corta la luz
       if (t === 150) { NV.Audio.sfx('blackout'); NV.Audio.pause(); }
       if (t >= 150 && t < 160 && (t & 2)) X.rect(0, 0, W, 360, '#ffffff');
-      // 3) sube la silueta de MECHA-NOEL con los ojos encendidos
+      // 3) sube la silueta de DON GRUÑÓN con los anteojos encendidos
       if (t >= 170 && t < 330) {
-        const m = window.ART_DATA.sprites.noel, sc = 2, up = ease((t - 170) / 40);
+        const m = window.ART_DATA.sprites.grunon, sc = 2, up = ease((t - 170) / 40);
         const bx = W / 2 + (t > 205 && t < 225 ? (Math.random() - 0.5) * 6 : 0), by = 400 - up * 120;
         ctx.save(); ctx.translate(Math.round(bx), Math.round(by)); ctx.scale(sc, sc);
-        ctx.filter = 'brightness(0)'; ctx.drawImage(X.img.noel, 2 * m.w, 0, m.w, m.h, -m.w / 2, -m.h, m.w, m.h); ctx.filter = 'none';
+        ctx.filter = 'brightness(0)'; ctx.drawImage(X.img.grunon, 2 * m.w, 0, m.w, m.h, -m.w / 2, -m.h, m.w, m.h); ctx.filter = 'none';
         ctx.restore();
-        [m.lensL, m.lensR].forEach((l, i) => {
+        (m.lenses ? [[m.lenses[2][0], m.lenses[2][1]], [m.lenses[2][2], m.lenses[2][3]]] : [m.lensL, m.lensR]).forEach((l, i) => {
           const ex = bx - (m.w * sc) / 2 + l[0] * sc, ey = by - m.h * sc + l[1] * sc;
           const g = ctx.createRadialGradient(ex, ey, 0, ex, ey, 24); g.addColorStop(0, i ? 'rgba(51,224,122,1)' : 'rgba(255,46,74,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
           ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g; ctx.fillRect(ex - 24, ey - 24, 48, 48); ctx.restore();
         });
         if (t === 205) NV.Audio.sfx('roar');
-        typed('MECHA-NOEL QUIERE ROBARSE LA NAVIDANCE', W / 2, 40, 210, t, { scale: 2, align: 'center', color: '#ff2e4a' });
+        typed('DON GRUÑÓN SE ROBÓ LOS PARLANTES', W / 2, 40, 210, t, { scale: 2, align: 'center', color: '#ff2e4a' });
       }
       // 4) los 3 DJs entran desde abajo
       if (t >= 270) {
@@ -376,7 +376,7 @@
       const X = NV.X, W = X.W;
       bg(ctx, G, 0.7);
       X.text('¡SE ACABÓ EL TIEMPO!', W / 2, 90, { scale: 3, align: 'center', color: '#ff2e4a', outline: true });
-      X.text('MECHA-NOEL SE ROBÓ LA NAVIDANCE', W / 2, 124, { scale: 1, align: 'center', color: '#4de2ff' });
+      X.text('DON GRUÑÓN SE QUEDÓ CON LA NAVIDANCE', W / 2, 124, { scale: 1, align: 'center', color: '#4de2ff' });
       X.text('TENÉS 3 MINUTOS PARA LLEGAR Y VENCERLO', W / 2, 140, { align: 'center', color: '#8ea2c4' });
       menu(G, [
         { label: 'OTRA VEZ', x: W / 2 - 70, y: 200, w: 130, h: 32, color: '#b3132b', act: () => G.startRun(G.heroKey) },

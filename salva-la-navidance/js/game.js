@@ -128,7 +128,7 @@
         const n = 4 - (G.beat - G.countBeat);
         if (G.beatTick) { if (n > 0) { G.sfx('beep'); G.say(String(n), { scale: 6, life: 26, color: p.hero.light }); } else { G.sfx('go'); G.running = true; G.t0 = performance.now();
           // el servidor anota la largada: el tiempo final tiene que coincidir con su reloj
-          const pid = G.profile.id; G.tokenP.then((t) => NV.DB.go(t, pid)); G.say('¡YA!', { scale: 6, life: 40, color: '#f5c542', sub: 'LLEGÁ A MECHA-NOEL Y SALVÁ LA NAVIDANCE', subColor: '#ffffff' }); } }
+          const pid = G.profile.id; G.tokenP.then((t) => NV.DB.go(t, pid)); G.say('¡YA!', { scale: 6, life: 40, color: '#f5c542', sub: 'LLEGÁ A DON GRUÑÓN Y RECUPERÁ LOS PARLANTES', subColor: '#ffffff' }); } }
       }
     }
     if (G.running) {
@@ -140,7 +140,7 @@
     if (G.banner) { G.banner.t++; if (--G.banner.life <= 0) G.banner = null; }
     if (G.vsT) {
       if (++G.vsT === 18) { G.sfx('slam'); G.shake(6); G.vib(60); }
-      if (G.vsT === 100) G.say('¡MECHA-NOEL!', { scale: 3, life: 100, color: '#ff2e4a', sub: 'QUIERE ROBARSE LA NAVIDANCE · ESQUIVÁ SUS LÁSERES' });
+      if (G.vsT === 100) G.say('¡DON GRUÑÓN!', { scale: 3, life: 100, color: '#ff2e4a', sub: 'SE ROBÓ LOS PARLANTES DE LA NAVIDANCE · ESQUIVÁ SUS LÁSERES' });
       if (G.vsT > 112) G.vsT = 0;
     }
 
@@ -335,7 +335,7 @@
     'PISÁ ENEMIGOS: REBOTÁS Y NO PERDÉS VELOCIDAD',
     'EL DASH TAMBIÉN FUNCIONA EN EL AIRE',
     'DASH + SALTO = SALTO LARGO Y RÁPIDO',
-    'CUANDO LA HEBILLA DE MECHA-NOEL BRILLA, RECIBE DOBLE DAÑO',
+    'CUANDO LA PANZA DE DON GRUÑÓN BRILLA, RECIBE DOBLE DAÑO',
     'HAY 2 MEGA B-COINS ESCONDIDAS EN EL NIVEL',
     'CON EL ESCUDO DORADO ROMPÉS ENEMIGOS AL TOCARLOS',
     'LA SILUETA BLANCA ES TU MEJOR PARTIDA: ¡GANALE!',
@@ -346,7 +346,7 @@
     'SI TE PEGÁS AL JEFE, TE TIRA UN MANOTAZO',
   ];
 
-  // Presentación del jefe: tu DJ entra por la izquierda, Mecha-Noel por la derecha, "VS" en el medio
+  // Presentación del jefe: tu DJ entra por la izquierda, Don Gruñón por la derecha, "VS" en el medio
   function drawVS(ctx) {
     const W = X.W, t = G.vsT, h = G.player.hero;
     const ease = (v) => 1 - Math.pow(1 - U.clamp(v, 0, 1), 3);
@@ -362,9 +362,9 @@
     };
     const lx = -slide, rx = slide;
     band(lx - 20, lx + W / 2 - 12, h.dark, X.img[G.heroKey + '_portrait'], lx + W / 2 - 230, 210, 210, false);
-    band(rx + W / 2 + 12, rx + W + 60, '#3a0a12', X.img.noel_card, rx + W / 2 + 30, 220, 212, false);
+    band(rx + W / 2 + 12, rx + W + 60, '#3a0a12', X.img.grunon_card, rx + W / 2 + 30, 220, 212, false);
     X.text(h.name, lx + 30, 296, { scale: 2, color: h.light, outline: true });
-    X.text('MECHA-NOEL', rx + W - 30, 296, { scale: 2, align: 'right', color: '#ff2e4a', outline: true });
+    X.text('DON GRUÑÓN', rx + W - 30, 296, { scale: 2, align: 'right', color: '#ff2e4a', outline: true });
     if (t > 14 && out < 1) {
       const pop = Math.max(1, 2.2 - (t - 14) * 0.15);
       ctx.save(); ctx.translate(W / 2, 168); ctx.scale(pop, pop); ctx.globalAlpha = 1 - out;

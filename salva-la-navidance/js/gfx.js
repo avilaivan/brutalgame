@@ -32,7 +32,7 @@
   const LIST = {
     ivan: 'assets/sprites/ivan.png', hades: 'assets/sprites/hades.png', matias: 'assets/sprites/matias.png',
     patovica: 'assets/sprites/patovica.png', regalo: 'assets/sprites/regalo.png', esfera: 'assets/sprites/esfera.png', duende: 'assets/sprites/duende.png',
-    noel: 'assets/sprites/noel.png', coin: 'assets/sprites/coin.png', mega: 'assets/sprites/mega.png', shield: 'assets/sprites/shield.png',
+    grunon: 'assets/sprites/grunon.png', coin: 'assets/sprites/coin.png', mega: 'assets/sprites/mega.png', shield: 'assets/sprites/shield.png',
     heart: 'assets/sprites/heart.png', beacon: 'assets/sprites/beacon.png', elaser: 'assets/sprites/elaser.png', ornament: 'assets/sprites/ornament.png',
     wave: 'assets/sprites/wave.png', boom: 'assets/sprites/boom.png', movinghead: 'assets/sprites/movinghead.png',
     shot_ivan: 'assets/sprites/shot_ivan.png', shot_hades: 'assets/sprites/shot_hades.png', shot_matias: 'assets/sprites/shot_matias.png',
@@ -42,9 +42,9 @@
     logo: 'assets/img/logo.png', brutal_logo: 'assets/img/brutal_logo.png', coinBig: 'assets/img/coin.png',
     ivan_face: 'assets/img/ivan_face.jpg', hades_face: 'assets/img/hades_face.jpg', matias_face: 'assets/img/matias_face.jpg',
     ivan_portrait: 'assets/img/ivan_portrait.jpg', hades_portrait: 'assets/img/hades_portrait.jpg', matias_portrait: 'assets/img/matias_portrait.jpg',
-    noel_card: 'assets/img/noel_card.png',
+    grunon_card: 'assets/img/grunon_card.png',
   };
-  const WHITE = ['ivan', 'hades', 'matias', 'patovica', 'regalo', 'esfera', 'duende', 'noel', 'heart', 'coin'];
+  const WHITE = ['ivan', 'hades', 'matias', 'patovica', 'regalo', 'esfera', 'duende', 'grunon', 'heart', 'coin'];
   X.load = function (done) {
     const keys = Object.keys(LIST); X.total = keys.length;
     keys.forEach((k) => {

@@ -117,10 +117,10 @@
   };
 
   // =====================================================================
-  //  MECHA-NOEL — jefe final (Papá Noel robot). Ataques al ritmo (1 ataque por compás):
+  //  DON GRUÑÓN — jefe final (bicho verde que se robó los parlantes). Ataques al ritmo (1 por compás):
   //  LÁSER de sus anteojos (apunta y dispara), LLUVIA de bolas de Navidad, PISOTÓN con onda de nieve.
   // =====================================================================
-  const GM = () => window.ART_DATA.sprites.noel;
+  const GM = () => window.ART_DATA.sprites.grunon;
   NV.Boss = function (A) {
     return { cx: A.bossX, by: A.bossY, w: 100, h: 118, hp: 100, maxHp: 100, swatT: 0, swatCd: 0, stompCd: 0, phase: 1, active: false, dead: false, deathT: 0,
       frame: 0, flash: 0, atk: 'intro', bar: -1, startBeat: 0, aims: [], beams: 0, seq: 0, hurtT: 0 };
@@ -137,7 +137,9 @@
   }
   // primera superficie donde cae algo soltado desde arriba en x (piso o plataforma)
   function landY(L, x, A) { for (let y = 0; y < A.floorY; y += 4) if (NV.Phys.groundAt(L, x, y)) return Math.floor(y / 16) * 16; return A.floorY; }
-  function lens(b, which) { const m = GM(); const l = which ? m.lensR : m.lensL; return { x: b.cx - m.w / 2 + l[0] + 3, y: b.by - m.h + l[1] }; }
+  // ojos del cuadro actual (cada pose tiene los anteojos en otro lugar)
+  function eyes(m, frame) { const f = m.lenses && m.lenses[frame]; return f ? [[f[0], f[1]], [f[2], f[3]]] : [m.lensL, m.lensR]; }
+  function lens(b, which) { const m = GM(); const l = eyes(m, b.frame)[which ? 1 : 0]; return { x: b.cx - m.w / 2 + l[0], y: b.by - m.h + l[1] }; }
 
   NV.updateBoss = function (b, G) {
     const p = G.player, A = G.L.arena;
@@ -178,7 +180,7 @@
       }
     }
     // frame
-    b.frame = b.atk === 'laser' ? (b.beams > 0 ? 3 : b.aimLive ? 2 : 0) : (b.atk === 'slam' && b.inBar === 0) || b.atk === 'volley' ? 4 : (G.beat & 1);
+    b.frame = b.atk === 'laser' ? (b.beams > 0 ? 3 : b.aimLive ? 2 : 0) : (b.atk === 'slam' && b.inBar === 0) || b.atk === 'volley' ? 4 : b.phase === 2 ? 6 : (G.beat & 1);
     // contacto / pisotón en la cabeza
     const bb = box(b);
     if (b.stompCd > 0) b.stompCd--;
@@ -275,13 +277,13 @@
     }
     if (b.dead && b.deathT > 130) return;
     const glow = b.atk === 'rest' && !b.dead;
-    X.spr('noel', b.frame, b.cx - cx, b.by - cy, { flash: b.flash > 0 || (b.dead && (G.frame >> 1) % 2 && b.deathT < 110) });
+    X.spr('grunon', b.frame, b.cx - cx, b.by - cy, { flash: b.flash > 0 || (b.dead && (G.frame >> 1) % 2 && b.deathT < 110) });
     if (glow) { const m = GM(); ctx.save(); ctx.fillStyle = '#9dffbf'; ctx.globalAlpha = 0.5 + 0.5 * Math.sin(G.frame * 0.4); NV.Input.circ(ctx, b.cx - m.w / 2 + m.core[0] - cx, b.by - m.h + m.core[1] - cy, 7); ctx.restore(); }
     if (b.dead) return;
     // brillo de los ojos y arcos eléctricos entre los aisladores (más intensos en el apagón total)
     const m = GM(), ox = b.cx - m.w / 2 - cx, oy = b.by - m.h - cy;
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    [m.lensL, m.lensR].forEach((l, i) => {
+    eyes(m, b.frame).forEach((l, i) => {
       const r = 14 + (b.aimLive ? 6 : 0) + (b.phase === 2 ? 4 : 0) + Math.sin(G.frame * 0.3) * 2;
       const g = ctx.createRadialGradient(ox + l[0], oy + l[1], 0, ox + l[0], oy + l[1], r);
       g.addColorStop(0, i ? 'rgba(51,224,122,.55)' : 'rgba(255,46,74,.55)'); g.addColorStop(1, 'rgba(0,0,0,0)');

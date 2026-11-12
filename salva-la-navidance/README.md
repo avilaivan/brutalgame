@@ -37,12 +37,12 @@ Los datos se guardan en `data/scores.json`. Para empezar el ranking de cero, bor
 
 ## 2. Reglas del juego
 
-- **La historia:** es Nochebuena en **9 de Julio**, nieva sobre la ciudad y **MECHA-NOEL**, un Papá Noel robot gigante, quiere robarse la Navidance. Tu DJ tiene que cruzar la ciudad y vencerlo.
-- **Un solo nivel** con 3 zonas: **Ruta 5 nevada** (silos y campo), **Centro navideño** (catedral, palacio municipal, árbol gigante de la plaza, cartel BRUTAL.) y **Autódromo**, con **MECHA-NOEL** como jefe final.
+- **La historia:** es Nochebuena en **9 de Julio**, nieva sobre la ciudad y **DON GRUÑÓN**, un bicho verde amargado que odia la música electrónica, se robó los parlantes de la Navidance. Tu DJ tiene que cruzar la ciudad y vencerlo.
+- **Un solo nivel** con 3 zonas: **Ruta 5 nevada** (silos y campo), **Centro navideño** (catedral, palacio municipal, árbol gigante de la plaza, cartel BRUTAL.) y **Autódromo**, con **DON GRUÑÓN** como jefe final.
 - **Enemigos:** Muñecos Patovica (muñecos de nieve que saltan al beat), Regalos Poseídos (disparan bastones de caramelo), Esferas Malditas (bolas de árbol que vuelan) y Duendes Traviesos que tiran bolas de Navidad.
 - **Plataformas:** todas se alcanzan con un salto (verificado con una simulación). Los bafles y las consolas del escenario también se pueden pisar.
 - **Combo y FIEBRE:** encadená 5 enemigos sin cortar el combo (2,5 s entre uno y otro) y entrás en **FIEBRE BRUTAL**: corrés más rápido mientras sigas el combo. Si te pegan, se corta.
-- El reloj arranca con la cuenta regresiva (3, 2, 1, ¡YA!, al ritmo de la canción) y se frena con el golpe final a Mecha-Noel.
+- El reloj arranca con la cuenta regresiva (3, 2, 1, ¡YA!, al ritmo de la canción) y se frena con el golpe final a Don Gruñón.
 - **Límite: 3 minutos.** Si se termina el tiempo, no entra al ranking.
 - Si te matan, volvés al último checkpoint (sin game over), pero el reloj sigue corriendo.
 - La pausa **no** frena el reloj (es una carrera: el tiempo es real).
@@ -88,7 +88,7 @@ Corren, saltan y disparan **exactamente igual** (mismo alcance, mismo daño). Ca
 - **Hades (azul):** se electrocuta, glitchea y se desintegra en píxeles.
 - **Matias (verde):** implota en ondas de sintetizador.
 
-### MECHA-NOEL (jefe final)
+### DON GRUÑÓN (jefe final)
 Ataca **al ritmo de la canción**, un ataque por compás:
 - **Láser de sus lentes:** apunta (línea punteada roja y verde) y en el siguiente beat dispara. Hay que moverse o hacer dash.
 - **Lluvia de bolas de Navidad:** una marca roja en el piso avisa dónde va a caer.
@@ -96,7 +96,7 @@ Ataca **al ritmo de la canción**, un ataque por compás:
 - **Ráfaga de bastones:** tira bastones de caramelo apuntados a donde estés (las plataformas no son refugio).
 - **Manotazo:** si te quedás pegado a él, levanta el brazo y barre a los costados.
 - Saltarle en la cabeza le hace 2 de daño y te despide hacia atrás.
-- **Descanso:** la hebilla de su cinturón brilla y recibe **doble daño**.
+- **Descanso:** la panza le brilla y recibe **doble daño**.
 - **SE CORTÓ LA NAVIDAD:** a la mitad de la vida se apagan las luces (solo queda un círculo de luz alrededor tuyo) y ataca más seguido.
 - A la mitad de la vida entra en **furia** y ataca más seguido.
 
@@ -110,7 +110,7 @@ Las canciones fueron analizadas (BPM, beat y energía de graves/medios/agudos en
 - las guirnaldas, árboles, carteles de neón y el cartel BRUTAL. titilan en cada beat,
 - los bafles laten con el bajo y aparecen láseres en los momentos más fuertes,
 - los enemigos saltan, disparan y tiran bolas de Navidad sobre el beat,
-- Mecha-Noel elige y lanza sus ataques al compás.
+- Don Gruñón elige y lanza sus ataques al compás.
 
 **Para cambiar una canción:** reemplazá el mp3 en `assets/music/` con el mismo nombre (`ivan.mp3`, `hades.mp3`, `matias.mp3`) y pedime que regenere el análisis. Si no, las luces siguen el análisis de la canción anterior.
 
@@ -140,7 +140,7 @@ css/style.css         estilo 8-bit del registro
 js/core.js            ⚙ TODOS los números del juego (vida, velocidad, dash, escudo, 3 minutos…)
 js/level.js           el mapa: dónde va cada enemigo, moneda, ítem y checkpoint
 js/player.js          movimiento, disparo y las 3 muertes
-js/enemies.js         enemigos navideños y Mecha-Noel
+js/enemies.js         enemigos navideños y Don Gruñón
 js/stage.js           escenario, luces de boliche, láseres, guirnaldas
 js/audio.js           canciones, beat y efectos de sonido
 js/db.js              conexión con el ranking (servidor / Supabase / local)
@@ -162,7 +162,7 @@ assets/music/         una canción por DJ
 
 ## 6. Arte
 
-El escenario, los tiles, los enemigos y MECHA-NOEL están dibujados píxel por píxel por código en `tools/arte.py` (sin IA, con paleta propia). Para retocar algo:
+El escenario, los tiles, y los enemigos están dibujados píxel por píxel por código en `tools/arte.py`. Don Gruñón se diseñó con Gemini (originales en `arte-fuente/jefe/`) y `tools/jefe.py` lo convierte al juego: saca el fondo, borra el cinturón, escala y ubica los anteojos y la panza (sin IA, con paleta propia). Para retocar algo:
 
 1. Cambiar la función que lo dibuja en `tools/arte.py` (por ejemplo `catedral()` o `patovica()`).
 2. Correr `python tools/arte.py` (necesita Python con Pillow).

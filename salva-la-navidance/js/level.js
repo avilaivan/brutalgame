@@ -1,5 +1,5 @@
 // =====================================================================
-//  EL NIVEL: "9 DE JULIO EN NAVIDAD" — 3 zonas + arena de Mecha-Noel.
+//  EL NIVEL: "9 DE JULIO EN NAVIDAD" — 3 zonas + arena de Don Gruñón.
 //  Todo está SIEMPRE en el mismo lugar (es una carrera contra el reloj).
 // =====================================================================
 (function () {
@@ -116,9 +116,9 @@
     cp(407, 'JEFE FINAL');
     L.bossDoor = 410 * 16;
 
-    // ================= ARENA DE MECHA-NOEL (412-451) =================
+    // ================= ARENA DE DON GRUÑÓN (412-451) =================
     fill(449, 0, 455, H - 1);                 // pared derecha pegada al jefe: no hay escondite detrás de él
-    block(440, 451, 15);                       // tarima de Mecha-Noel
+    block(440, 451, 15);                       // tarima de Don Gruñón
     plat(417, 421, 15); plat(427, 431, 12);    // plataformas para esquivar
     deco('speaker', 413, GR); deco('speaker', 434, GR);
     L.arena = { x0: 412 * 16, x1: 452 * 16, gateX: 411, floorY: GR * 16, bossX: 446 * 16, bossY: 15 * 16 };
