@@ -1,0 +1,12 @@
+# dependencias y datos locales
+node_modules/
+salva-la-navidance/data/scores.json
+salva-la-navidance/data/*.tmp
+
+# herramientas locales (IA, editores, sistema)
+.claude/
+graphify-out/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
