@@ -36,10 +36,11 @@
     const warn = NV.CFG.TIME_LIMIT - t < 20;
     X.text(NV.U.fmtTime(t), W / 2, 10, { scale: 3, narrow: true, align: 'center', color: warn && (G.frame >> 3) % 2 ? '#ff2e4a' : '#ffffff' });
     const pb = NV.DB.best();
+    // TU RÉCORD = tu mejor tiempo. VS TU SOMBRA = cuánto vas adelante (-) o atrás (+) de esa partida, ahora mismo
     const d = G.gDelta;
     if (warn) X.text('¡SE ACABA EL TIEMPO!', W / 2, 34, { align: 'center', color: '#ff2e4a' });
-    else if (d !== null && d !== undefined && G.running) X.text('VS RÉCORD ' + (d < 0 ? '-' : '+') + Math.abs(d).toFixed(2), W / 2, 34, { align: 'center', color: d < 0 ? '#33e07a' : '#ff2e4a' });
-    else X.text(pb ? 'RÉCORD ' + NV.U.fmtTime(pb) : 'SIN RÉCORD TODAVÍA', W / 2, 34, { align: 'center', color: '#8ea2c4' });
+    else if (d !== null && d !== undefined && G.running) X.text('VS TU SOMBRA ' + (d < 0 ? '-' : '+') + Math.abs(d).toFixed(2) + ' S', W / 2, 34, { align: 'center', color: d < 0 ? '#33e07a' : '#ff2e4a' });
+    else X.text(pb ? 'TU RÉCORD ' + NV.U.fmtTime(pb) : 'SIN RÉCORD TODAVÍA', W / 2, 34, { align: 'center', color: '#8ea2c4' });
 
     // ---------- B-Coins y puntos ----------
     X.panel(W - 124, 6, 118, 34);

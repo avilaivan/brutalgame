@@ -31,6 +31,8 @@
     }
     let ix = locked ? 0 : (IN.held.right ? 1 : 0) - (IN.held.left ? 1 : 0);
     if (p.hurt > 0) { p.hurt--; ix = 0; p.vx = -p.dir * 1.2; p.dash = 0; }
+    // recién vuelto de un pozo: quieto hasta que sueltes la dirección (máx. 1 s), así no volvés a caer por seguir apretando ▶
+    if (p.lock > 0) { p.lock--; if (!ix) p.lock = 0; else ix = 0; }
     if (ix && !p.dash) p.dir = ix;
 
     // ---------- dash ----------
@@ -72,8 +74,10 @@
     NV.Phys.move(p, L);
     p.sq = (p.sq || 1) + (1 - (p.sq || 1)) * 0.22; // vuelve suave a su forma
     if (p.landed) { p.chain = 0; p.sq = 0.84; p.landT = 7; for (let i = 0; i < 4; i++) FX.part(G, { x: p.x + 7 + U.rand(-6, 6), y: p.y + p.h, vx: U.rand(-0.8, 0.8), vy: -U.rand(0.2, 0.8), color: '#e9f4ff', life: 12, max: 12 }); }
-    // último lugar seguro (para volver si se cae a un pozo)
-    if (p.onGround && NV.Phys.solidAt(L, p.x + 2, p.y + p.h + 2) && NV.Phys.solidAt(L, p.x + p.w - 2, p.y + p.h + 2)) p.safe = { x: p.x + 7, y: p.y + p.h };
+    // último lugar seguro (para volver si se cae a un pozo): piso firme con un margen a cada lado,
+    // así nunca reaparecés justo en el borde del pozo
+    const fy = p.y + p.h + 2, S = NV.Phys.solidAt;
+    if (p.onGround && S(L, p.x - 32, fy) && S(L, p.x + 2, fy) && S(L, p.x + p.w - 2, fy) && S(L, p.x + p.w + 32, fy)) p.safe = { x: p.x + 7, y: p.y + p.h };
     if (p.y > L.h * 16 + 8) { G.pitFall(); return; }
 
     // ---------- disparo (mantener = ráfaga) ----------

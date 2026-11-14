@@ -51,8 +51,9 @@
     if (params.get('boss')) { G.cp = 3; G.respawnAt(G.L.checkpoints[3]); }
   };
 
+  // reaparecer: invulnerable 2 s y sin balas en pantalla
   G.respawnAt = function (c) {
-    const p = NV.Player(G.heroKey, c.x, c.y); p.invuln = 90; G.player = p;
+    const p = NV.Player(G.heroKey, c.x, c.y); p.invuln = 120; G.player = p;
     G.bullets = [];
   };
   G.respawn = function () {
@@ -65,7 +66,8 @@
     const p = G.player;
     p.hp -= 1; G.sfx('hurt'); G.shake(4);
     if (p.hp <= 0) { p.y = G.L.h * 16; NV.killPlayer(p, G); p.y = p.safe.y - p.h; p.x = p.safe.x - 7; return; }
-    p.x = p.safe.x - 7; p.y = p.safe.y - p.h - 2; p.vx = p.vy = 0; p.invuln = 70; p.dash = 0;
+    p.x = p.safe.x - 7; p.y = p.safe.y - p.h - 2; p.vx = p.vy = 0; p.invuln = 90; p.dash = 0; p.lock = 60; p.jumpBuf = 0;
+    G.bullets = G.bullets.filter((b) => b.mine || Math.abs(b.x - p.x) > 140); // sin balas enemigas encima al volver
     FX.burst(G, p.x + 7, p.y + 17, p.hero.color, 12, 2, 20, 0, 2);
   };
 
@@ -545,6 +547,10 @@
   // ---------------- ARRANQUE ----------------
   X.resize(); window.addEventListener('resize', X.resize);
   window.addEventListener('keydown', (e) => { if (e.code === 'KeyM' && document.activeElement.tagName !== 'INPUT') A.toggleMute(); });
+  // la app pierde el foco (otra pestaña, notificación, llamada): pausa automática.
+  // No es trampa: el reloj de la carrera es real y sigue corriendo en pausa (igual que el del servidor);
+  // si la pausa se estira hasta los 3 minutos, la partida termina por tiempo.
+  window.addEventListener('blur', () => { if (G.state === 'play' && G.running && !G.paused && !G.finished) { G.paused = true; G.mi = 0; A.pause(); IN.clear(); } });
   document.addEventListener('visibilitychange', () => { if (document.hidden) { if (G.state === 'play' && G.running && !G.paused) { G.paused = true; G.mi = 0; } A.pause(); } else if (G.state !== 'play' || !G.paused) A.resume(); });
   IN.setup(X.disp);
   NV.Stage.init();

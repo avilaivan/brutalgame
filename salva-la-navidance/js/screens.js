@@ -281,7 +281,7 @@
         ctx.save(); ctx.globalAlpha = pr; ctx.translate(0, Math.round((1 - pr) * 12));
         X.text('★ EL TOP 3 SE LLEVA PREMIO ★', W / 2, 186, { align: 'center', color: (G.frame >> 3) % 2 ? '#f5c542' : '#ffffff', outline: true });
         const top = G.partyTop;
-        if (top) X.text('A VENCER: ' + String(top.name).toUpperCase() + '  ' + U.fmtTime(top.timeMs / 1000), W / 2, 202, { scale: 2, align: 'center', color: '#ff2e4a', outline: true, maxW: W - 24 });
+        if (top) X.text('#1 DEL RANKING: ' + String(top.name).toUpperCase() + '  ' + U.fmtTime(top.timeMs / 1000), W / 2, 202, { scale: 2, align: 'center', color: '#ff2e4a', outline: true, maxW: W - 24 });
         else X.text('COMPETÍ POR EL MEJOR TIEMPO', W / 2, 202, { scale: 2, align: 'center', color: '#ff2e4a', outline: true });
         ctx.restore();
       }
