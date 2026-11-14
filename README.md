@@ -11,6 +11,8 @@ arte-fuente/          arte original en alta: personajes, animaciones, enemigos y
   animaciones/        hojas de animación de cada DJ
   enemigos/
   elementos/          logo y B-Coin
+  ASSETS AGREGADOS/   arte nuevo: DJs (correr, disparo, salto, dash, muerte), ROBO-GRINCH y B-Coin
+  FONT Y VIDEOS ANIMADOS/   fuente Akira, video transparente del menú y canción del menú
 ```
 
 Cómo levantar el juego, reglas y publicación: ver [`salva-la-navidance/README.md`](salva-la-navidance/README.md).
@@ -21,9 +23,10 @@ Las canciones están solo dentro del juego, en `salva-la-navidance/assets/music/
 
 | Archivo | Canción | DJ |
 |---|---|---|
-| `ivan.mp3` | Play Me | Avila Ivan |
+| `menu.mp3` | Flower In A Hurricane [GTAVI] – 80s REMIX | menú principal |
+| `ivan.mp3` | Play Me | Ivan |
 | `hades.mp3` | Animal Rights | BB Hades |
-| `matias.mp3` | Energy | Matias Torrelles |
+| `matias.mp3` | Energy | Matias |
 
 ## Cómo trabajamos
 

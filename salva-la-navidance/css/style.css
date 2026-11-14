@@ -1,8 +1,13 @@
-@font-face { font-family: 'Brutal8'; src: url(../assets/fonts/brutal8.ttf) format('truetype'); font-display: block; }
+/* AKIRA en 8-bit (generada con tools/fuente.py a partir de Akira Expanded) */
+@font-face { font-family: 'Akira8'; src: url(../assets/fonts/akira8.ttf) format('truetype'); font-display: block; }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body { width: 100%; height: 100%; background: #07060b; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-body { display: flex; align-items: center; justify-content: center; font-family: 'Brutal8', monospace; color: #fff; }
+body { display: flex; align-items: center; justify-content: center; font-family: 'Akira8', monospace; color: #fff; }
 #game { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+/* logo animado del menú: el negro del video desaparece (screen) y no tapa los toques */
+#menuVideo { position: fixed; left: 0; top: 0; width: 0; height: 0; display: none; pointer-events: none; mix-blend-mode: screen; z-index: 2; background: transparent; object-fit: fill;
+  filter: saturate(1.7) contrast(1.06); /* más saturado: el rojo pega más */ }
+#menuVideo::-webkit-media-controls { display: none !important; }
 .hidden { display: none !important; }
 
 /* ---------- Registro 8-bit ---------- */
@@ -14,7 +19,7 @@ body { display: flex; align-items: center; justify-content: center; font-family:
 .box h1 span { font-size: 33px; color: #f5c542; text-shadow: 3px 3px 0 #5c0815; }
 .box .lead { font-size: 11px; color: #8ea2c4; margin: 8px 0 12px; line-height: 1.5; }
 .box label { display: block; text-align: left; font-size: 11px; color: #f5c542; margin: 10px 0 4px; letter-spacing: 1px; }
-.box input:not([type=checkbox]) { width: 100%; font-family: 'Brutal8', monospace; font-size: 22px; color: #fff; background: #05040b; border: 0; outline: 0; padding: 8px 10px;
+.box input:not([type=checkbox]) { width: 100%; font-family: 'Akira8', monospace; font-size: 22px; color: #fff; background: #05040b; border: 0; outline: 0; padding: 8px 10px;
   box-shadow: inset 0 0 0 3px #3a4466; border-radius: 0; -webkit-appearance: none; user-select: text; -webkit-user-select: text; }
 .box input:focus { box-shadow: inset 0 0 0 3px #f5c542; }
 .box input::placeholder { color: #3a4466; }
@@ -26,7 +31,7 @@ body { display: flex; align-items: center; justify-content: center; font-family:
 .chk input:checked + i { background: #33e07a; box-shadow: inset 0 0 0 3px #0a4a25; }
 .chk span { font-size: 11px; text-align: left; }
 #regErr { min-height: 16px; font-size: 11px; color: #ff2e4a; margin: 8px 0 4px; }
-.btn { display: block; width: 100%; font-family: 'Brutal8', monospace; font-size: 22px; color: #fff; background: #10101e; border: 0; padding: 10px; margin-top: 8px; cursor: pointer;
+.btn { display: block; width: 100%; font-family: 'Akira8', monospace; font-size: 22px; color: #fff; background: #10101e; border: 0; padding: 10px; margin-top: 8px; cursor: pointer;
   box-shadow: inset 0 0 0 3px #3a4466, inset 0 -6px 0 rgba(0,0,0,.35); }
 .btn.red { background: #b3132b; box-shadow: inset 0 0 0 3px #ffffff, inset 0 -6px 0 rgba(0,0,0,.35); }
 .btn:active { transform: translateY(2px); }

@@ -48,3 +48,35 @@ test('admin: clave solo por header', async () => {
   assert.strictEqual((await fetch(URL + '/api/admin?key=k')).status, 401);
   assert.strictEqual((await fetch(URL + '/api/admin', { headers: { 'X-Admin-Key': 'k' } })).status, 200);
 });
+
+// ---------- registro: el Instagram es único ----------
+test('un Instagram se registra una sola vez; otro dispositivo tiene que confirmar', async () => {
+  const a = await post('/api/register', { name: 'Ana', ig: 'unica', playerId: 'devA' });
+  assert.strictEqual(a.status, 200); assert.strictEqual(a.isNew, true);
+  const b = await post('/api/register', { name: 'Otro', ig: 'unica', playerId: 'devB' });
+  assert.strictEqual(b.status, 409); assert.strictEqual(b.name, 'Ana');
+  const c = await post('/api/register', { name: 'Ana 2', ig: 'unica', playerId: 'devB', confirm: true });
+  assert.strictEqual(c.status, 200); assert.strictEqual(c.playerId, 'devA'); // sigue siendo el mismo jugador
+});
+
+test('el ranking muestra una fila por Instagram con el mejor tiempo (no acumula)', async () => {
+  const play = async (ms, name) => {
+    const { token } = await post('/api/run/start', { playerId: 'devR' });
+    await post('/api/run/go', { token, playerId: 'devR' }); await sleep(ms);
+    return post('/api/score', { name, ig: 'rankeado', playerId: 'devR', hero: 'hades', coins: 1, deaths: 0, token, timeMs: ms });
+  };
+  await post('/api/register', { name: 'Rank', ig: 'rankeado', playerId: 'devR' });
+  const r1 = await play(600, 'Rank'); assert.strictEqual(r1.status, 200, r1.error);
+  const r2 = await play(300, 'Rank'); assert.strictEqual(r2.improved, true);
+  const r3 = await play(500, 'Rank'); assert.strictEqual(r3.improved, false); assert.strictEqual(r3.best, 300);
+  const { ranking } = await fetch(URL + '/api/ranking?limit=50').then((r) => r.json());
+  const mine = ranking.filter((x) => x.player === 'devR');
+  assert.strictEqual(mine.length, 1); assert.strictEqual(mine[0].timeMs, 300); assert.strictEqual(mine[0].hero, 'hades');
+});
+
+test('no se puede mandar un tiempo con el Instagram de otro jugador', async () => {
+  const { token } = await post('/api/run/start', { playerId: 'intruso' });
+  await post('/api/run/go', { token, playerId: 'intruso' }); await sleep(300);
+  const r = await post('/api/score', { name: 'Intruso', ig: 'rankeado', playerId: 'intruso', hero: 'ivan', coins: 0, deaths: 0, token, timeMs: 300 });
+  assert.strictEqual(r.status, 409);
+});

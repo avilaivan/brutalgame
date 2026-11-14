@@ -13,7 +13,7 @@
     X.rect(9 + hs, 9, 28, 1, hero.color); X.rect(9 + hs, 36, 28, 1, hero.color); X.rect(9 + hs, 9, 1, 28, hero.color); X.rect(36 + hs, 9, 1, 28, hero.color);
     for (let i = 0; i < NV.CFG.HP; i++) X.spr('heart', i < p.hp ? 0 : 1, 49 + hs + i * 15, 25, { flash: G.hpLost > 0 && i === p.hp && (G.hpLost >> 1) % 2 });
     if (G.hpLost > 0) G.hpLost--;
-    X.text(hero.short, 42 + hs, 28, { scale: 1, color: hero.light });
+    X.text(hero.short, 42 + hs, 28, { scale: 1, color: hero.light, maxW: 78 });
     // barras: ENERGÍA del dash (cian, con marcas de cada dash) y CALOR del arma (amarillo -> rojo)
     const C = NV.CFG, lx = 10 + hs, bx = lx + 30, bw = 76;
     const bar = (y, v, col, label, lcol, blink) => {
@@ -34,7 +34,7 @@
     X.panel(W / 2 - 96, 4, 192, 50, { border: beatPulse ? hero.color : '#3a4466' });
     const t = G.runTime;
     const warn = NV.CFG.TIME_LIMIT - t < 20;
-    X.text(NV.U.fmtTime(t), W / 2, 10, { scale: 3, align: 'center', color: warn && (G.frame >> 3) % 2 ? '#ff2e4a' : '#ffffff' });
+    X.text(NV.U.fmtTime(t), W / 2, 10, { scale: 3, narrow: true, align: 'center', color: warn && (G.frame >> 3) % 2 ? '#ff2e4a' : '#ffffff' });
     const pb = NV.DB.best();
     const d = G.gDelta;
     if (warn) X.text('¡SE ACABA EL TIEMPO!', W / 2, 34, { align: 'center', color: '#ff2e4a' });
@@ -69,7 +69,7 @@
       X.text('★', bx + bw + 4, by - 4, { color: '#f5c542', shadow: false });
     } else if (G.boss) {
       const b = G.boss, bw = 200, bx = W / 2 - bw / 2, by = 60;
-      X.text('DON GRUÑÓN', bx, by - 1, { color: '#ff2e4a', outline: true });
+      X.text(NV.BOSS_NAME, bx, by - 1, { color: '#ff2e4a', outline: true });
       X.panel(bx, by + 9, bw, 10, { light: false });
       const fw = Math.round((bw - 4) * b.hp / b.maxHp);
       G.bossShow = Math.max(b.hp, (G.bossShow === undefined ? b.hp : G.bossShow) - 0.35); // estela blanca del daño reciente

@@ -7,6 +7,8 @@
   const I = { held: {}, prev: {}, taps: [], isTouch: false, bot: {}, touchOn: false, edges: new Set() };
   ACT.forEach((a) => { I.held[a] = I.prev[a] = false; });
   const key = {}, pad = {}, touch = {};
+  // latch: una pulsación que empieza y termina dentro del mismo cuadro igual cuenta (toques muy rápidos, celulares lentos)
+  const latch = {};
   const KEYS = {
     ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down',
     KeyZ: 'jump', Space: 'jump', KeyK: 'jump', KeyX: 'shoot', KeyJ: 'shoot', KeyC: 'dash', ShiftLeft: 'dash', ShiftRight: 'dash', KeyL: 'dash',
@@ -15,8 +17,8 @@
   const typing = () => { const el = document.activeElement; return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'); };
   window.addEventListener('keydown', (e) => {
     if (typing()) return;
-    const a = KEYS[e.code]; if (a) { key[a] = true; e.preventDefault(); }
-    if (e.code === 'Space' || e.code === 'KeyZ') key.confirm = true;
+    const a = KEYS[e.code]; if (a) { key[a] = true; if (!e.repeat) latch[a] = true; e.preventDefault(); }
+    if (e.code === 'Space' || e.code === 'KeyZ') { key.confirm = true; if (!e.repeat) latch.confirm = true; }
     NV.Audio && NV.Audio.unlock();
   });
   window.addEventListener('keyup', (e) => {
@@ -51,7 +53,7 @@
       if (e.pointerType === 'touch') I.isTouch = true;
       const p = NV.X.toInternal(e.clientX, e.clientY);
       const b = I.touchOn && I.isTouch ? hit(p.x, p.y) : null;
-      if (b) { ptr.set(e.pointerId, b); refreshTouch(); canvas.setPointerCapture(e.pointerId); }
+      if (b) { ptr.set(e.pointerId, b); latch[b] = true; refreshTouch(); canvas.setPointerCapture(e.pointerId); }
       else I.taps.push(p);
       e.preventDefault();
     });
@@ -75,7 +77,7 @@
 
   I.update = function () {
     pollPad();
-    for (const a of ACT) { I.prev[a] = I.held[a]; I.held[a] = !!(key[a] || pad[a] || touch[a] || I.bot[a]); if (I.held[a] && !I.prev[a]) I.edges.add(a); }
+    for (const a of ACT) { I.prev[a] = I.held[a]; I.held[a] = !!(key[a] || pad[a] || touch[a] || I.bot[a] || latch[a]); latch[a] = false; if (I.held[a] && !I.prev[a]) I.edges.add(a); }
   };
   I.pressed = (a) => I.held[a] && !I.prev[a];
   I.tap = () => I.taps.shift() || null;

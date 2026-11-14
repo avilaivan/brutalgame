@@ -15,7 +15,7 @@
     if (!p.dead && U.dist(c.x, c.y, px, py) < 15 && (!c.dyn || c.t > 10)) { c.dead = true; G.getCoin(c.x, c.y); }
   };
   NV.drawCoin = function (c, cx, cy, frame) {
-    NV.X.spr('coin', Math.floor((c.t + frame) / 5), c.x - cx, c.y - cy + 7 + (c.dyn ? 0 : Math.round(Math.sin(c.t * 0.08) * 1.5)));
+    NV.X.spr('coin', Math.floor((c.t + frame) / 5), c.x - cx, c.y - cy + 8 + (c.dyn ? 0 : Math.round(Math.sin(c.t * 0.08) * 1.5)));
   };
 
   NV.Item = (type, x, y) => ({ type, x, y, t: 0, dead: false });

@@ -1,5 +1,5 @@
 // =====================================================================
-//  EL NIVEL: "9 DE JULIO EN NAVIDAD" — 3 zonas + arena de Don Gruñón.
+//  EL NIVEL: "9 DE JULIO EN NAVIDAD" — 3 zonas + arena de Robo-Grinch.
 //  Todo está SIEMPRE en el mismo lugar (es una carrera contra el reloj).
 // =====================================================================
 (function () {
@@ -41,12 +41,16 @@
     crates(48, 50, 17); en('regalo', 49, 17);
     arc(46, 52, 15, 2);
     deco('console', 42, GR); deco('snow', 56, GR);
+    en('duende', 45, GR);
+    en('esfera', 55, 13, { patrol: [52, 60] });
     plat(58, 62, 15); coins(58, 62, 13);
     ground(64, 99);
     en('duende', 68, GR);
     en('esfera', 80, 14, { patrol: [76, 86] });
     coins(74, 86, 17);
     deco('lamp', 72, GR); deco('tree', 90, GR);
+    en('patovica', 87, GR, { patrol: [83, 91] });
+    en('duende', 98, 15);
     garland(64, 76, 6);
     // escalera hacia la meseta
     block(92, 95, 17); block(96, 99, 15);
@@ -57,6 +61,7 @@
     coins(118, 121, 8);
     deco('speaker', 124, GR); deco('console', 128, GR);
     item('shield', 130, 17);
+    en('patovica', 134, GR, { patrol: [131, 138] });
     coins(124, 136, 17);
 
     // ================= ZONA 2: TORRES DE NEÓN (140-289) =================
@@ -65,11 +70,13 @@
     ground(140, 160);
     en('regalo', 156, GR);
     deco('lamp', 146, GR); deco('snow', 150, GR);
+    en('duende', 148, GR);
     plat(162, 165, 17); arc(161, 166, 15, 2);
     ground(167, 186);
     en('patovica', 176, GR, { patrol: [170, 181] });
     block(182, 186, 17); en('duende', 184, 17);
     coins(170, 180, 17);
+    en('esfera', 176, 13, { patrol: [171, 181] });
     // pilares sobre el vacío
     block(189, 190, 17); block(193, 194, 15); block(197, 198, 17);
     coins(189, 190, 15); coins(193, 194, 13); coins(197, 198, 15);
@@ -78,6 +85,8 @@
     en('esfera', 220, 13, { patrol: [216, 224] });
     coins(204, 224, 17);
     deco('speaker', 202, GR); deco('tree', 226, GR);
+    en('patovica', 207, GR, { patrol: [205, 213] });
+    en('regalo', 222, GR);
     plat(228, 232, 16); plat(234, 238, 13); plat(240, 245, 10);
     coins(228, 232, 14); coins(234, 238, 11); coins(240, 245, 8);
     item('mega', 247, 8);
@@ -86,6 +95,8 @@
     garland(248, 262, 7);
     deco('console', 266, GR); deco('lamp', 270, GR);
     coins(266, 276, 17);
+    en('duende', 272, GR);
+    en('esfera', 277, 14, { patrol: [273, 282] });
     item('heart', 280, 17);
     deco('speaker', 284, GR);
 
@@ -94,6 +105,7 @@
     L.zones.push({ x: 292 * 16, name: 'ZONA 3 · AUTÓDROMO 9 DE JULIO' });
     en('duende', 300, 17); block(298, 301, 17);
     deco('tree', 294, GR); deco('tree', 306, GR);
+    en('esfera', 305, 13, { patrol: [302, 309] });
     block(311, 330, 16);
     en('patovica', 320, 16, { patrol: [313, 328] });
     deco('speaker', 312, 16); deco('speaker', 327, 16);
@@ -101,27 +113,35 @@
     garland(311, 330, 8);
     en('esfera', 338, 14, { patrol: [334, 343] });
     coins(334, 344, 17);
+    en('duende', 341, GR);
     crates(348, 349, 17); crates(350, 353, 15); en('regalo', 352, 15);
     arc(346, 355, 13, 2);
     ground(290, 360);
+    en('patovica', 357, GR, { patrol: [355, 360] });
     plat(362, 365, 17); arc(361, 366, 15, 2);
     ground(367, 455);
     en('duende', 374, GR);
+    en('regalo', 378, GR);
+    en('esfera', 384, 14, { patrol: [380, 388] });
+    en('duende', 389, GR);
     en('patovica', 382, GR, { patrol: [377, 388] });
     en('esfera', 392, 13, { patrol: [388, 397] });
     coins(370, 398, 17);
     deco('tree', 370, GR); deco('speaker', 386, GR); deco('tree', 398, GR);
     garland(367, 386, 7); garland(388, 406, 7);
+    en('duende', 395, GR);
+    en('patovica', 399, GR, { patrol: [396, 403] });
     item('shield', 400, 17); item('heart', 404, 17);
     cp(407, 'JEFE FINAL');
     L.bossDoor = 410 * 16;
+    NV.GRINCH_CALL_X = 371 * 16; // acá el Robo-Grinch aparece en el chat y corta la luz
 
-    // ================= ARENA DE DON GRUÑÓN (412-451) =================
-    fill(449, 0, 455, H - 1);                 // pared derecha pegada al jefe: no hay escondite detrás de él
-    block(440, 451, 15);                       // tarima de Don Gruñón
+    // ================= ARENA DE ROBO-GRINCH (412-451) =================
+    fill(452, 0, W - 1, H - 1);                // pared derecha
+    block(438, 451, 15);                       // tarima de Robo-Grinch; detrás de él, la bolsa con los parlantes robados
     plat(417, 421, 15); plat(427, 431, 12);    // plataformas para esquivar
     deco('speaker', 413, GR); deco('speaker', 434, GR);
-    L.arena = { x0: 412 * 16, x1: 452 * 16, gateX: 411, floorY: GR * 16, bossX: 446 * 16, bossY: 15 * 16 };
+    L.arena = { x0: 412 * 16, x1: 452 * 16, gateX: 411, floorY: GR * 16, bossX: 443.5 * 16, bossY: 15 * 16, bagX: 449 * 16 };
     L.coinTotal = L.coins.length + 30;
     return L;
   }

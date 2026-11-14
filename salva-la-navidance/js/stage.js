@@ -52,6 +52,26 @@
       const x = ox + sx; if (x > W || x + sw < 0) continue;
       for (let r = 0; r < 3; r++) { const w = ((hash(sx, r + (beat >> 1)) % (sw - 6)) | 0) + 4; X.rect(x + 2, sy + 3 + r * 5, w, 2, '#ff8a3d'); }
     }
+    // Durante la partida la ciudad del fondo va más oscura: así el piso, las plataformas y los personajes
+    // resaltan. Las luces de boliche, láseres y guirnaldas se dibujan DESPUÉS, así que quedan igual de brillantes.
+    if (G.state === 'play' && NV.CFG.BG_DIM > 0) { ctx.fillStyle = 'rgba(4,3,12,' + NV.CFG.BG_DIM + ')'; ctx.fillRect(0, 0, W, 360); }
+  };
+
+  // PLATAFORMAS CON EL NEÓN DEL DJ: la nieve de arriba queda blanca; la base toma el color del personaje
+  // (rojo Ivan, azul BB Hades, verde Matias). Se arma una copia de la hoja de tiles por partida.
+  S.setHero = function (key) {
+    const src = NV.X.img.tiles, h = NV.HEROES[key]; if (!src || !h) { S.tiles = null; return; }
+    const c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
+    const g = c.getContext('2d'); g.drawImage(src, 0, 0);
+    const R = (x, y, w, hh, col) => { g.fillStyle = col; g.fillRect(x, y, w, hh); };
+    // plataformas flotantes (tile 6): base completa de neón
+    const px = 6 * 16;
+    R(px, 4, 16, 12, h.dark); R(px, 4, 16, 1, h.light); R(px, 5, 16, 3, h.color); R(px, 8, 16, 1, '#0b0a12');
+    for (let x = 1; x < 16; x += 4) { R(px + x, 11, 2, 2, h.color); R(px + x, 11, 1, 1, h.light); }
+    R(px, 15, 16, 1, '#0b0a12');
+    // piso (tiles 0-2): filo de neón debajo de las lucecitas
+    for (let t = 0; t < 3; t++) { R(t * 16, 9, 16, 1, h.color); R(t * 16, 10, 16, 1, h.dark); }
+    S.tiles = c; chunks.clear();
   };
 
   function drawSkyLasers(ctx, G, W) {
@@ -157,7 +177,7 @@
     let m = chunks.get(L); if (!m) { chunks.clear(); m = new Map(); chunks.set(L, m); }
     if (m.has(ci)) { const c = m.get(ci); m.delete(ci); m.set(ci, c); return c; } // LRU
     const c = document.createElement('canvas'); c.width = CHW; c.height = L.h * 16; const g = c.getContext('2d');
-    const tiles = NV.X.img.tiles, tx0 = ci * (CHW / 16);
+    const tiles = S.tiles || NV.X.img.tiles, tx0 = ci * (CHW / 16);
     for (let ty = 0; ty < L.h; ty++) for (let tx = tx0; tx < Math.min(L.w, tx0 + CHW / 16); tx++) {
       const v = L.t[ty * L.w + tx]; if (!v) continue; const idx = tileIdx(L, tx, ty, v);
       if (idx >= 0) g.drawImage(tiles, idx * 16, 0, 16, 16, (tx - tx0) * 16, ty * 16, 16, 16);
@@ -165,6 +185,16 @@
     m.set(ci, c); if (m.size > MAXCH) m.delete(m.keys().next().value);
     return c;
   }
+  // PISO de los menús: el mismo piso nevado del juego, a la misma altura (ahí pegan las luces)
+  S.drawMenuFloor = function (ctx, G, camX) {
+    const tiles = NV.X.img.tiles, W = NV.X.W, top = NV.GR * 16 - G.camY;
+    const x0 = Math.floor(camX / 16) - 1;
+    for (let tx = x0; tx <= x0 + Math.ceil(W / 16) + 2; tx++) {
+      const sx = Math.round(tx * 16 - camX);
+      ctx.drawImage(tiles, (hash(tx, 1) % 7 === 0 ? 2 : hash(tx, 2) % 2) * 16, 0, 16, 16, sx, top, 16, 16);
+      for (let ty = 1; top + ty * 16 < 360; ty++) ctx.drawImage(tiles, (ty > 1 ? 7 : [3, 3, 3, 4, 5][hash(tx, ty) % 5]) * 16, 0, 16, 16, sx, top + ty * 16, 16, 16);
+    }
+  };
   S.drawTiles = function (ctx, L, camX, camY) {
     const X = NV.X, W = X.W;
     const c0 = Math.max(0, Math.floor(camX / CHW)), c1 = Math.floor((camX + W) / CHW);
@@ -185,9 +215,21 @@
       const img = X.img['deco_' + d.type]; if (!img) continue;
       const sx = Math.round(d.x - camX), sy = Math.round(d.y - camY - img.height);
       if (sx > W || sx + img.width < 0) continue;
-      ctx.drawImage(img, sx, sy);
+      if (d.type !== 'speaker') ctx.drawImage(img, sx, sy);
       if (d.type === 'speaker') {
-        for (const cy of [14, 40]) { const r = Math.round(5 + bass * 4); ctx.fillStyle = '#2a2e40'; NV.Input.circ(ctx, sx + 17, sy + cy, r + 2); ctx.fillStyle = '#0a0a0e'; NV.Input.circ(ctx, sx + 17, sy + cy, r); ctx.fillStyle = '#5a6080'; NV.Input.circ(ctx, sx + 17, sy + cy, 2); }
+        // BAFLE dibujado entero acá: caja de 32 px y conos simétricos respecto del centro EXACTO de la caja
+        // (la parte de arriba la tapa la tarima, por eso el cuerpo empieza 16 px más abajo). Sin cinta roja.
+        const bx = sx, by = sy + 16, bw = 32, bh = img.height - 16, mx = bx + 16;
+        X.rect(bx, by, bw, bh, '#2a2e40'); X.rect(bx + 1, by, bw - 2, bh - 1, '#0e0d18'); X.rect(bx + 2, by, bw - 4, 1, '#1c1c2c');
+        const cone = (cy, r, ring) => { // círculo de diámetro par centrado entre los píxeles 15 y 16
+          for (let y = 0; y < r; y++) { const w = Math.round(Math.sqrt(r * r - (y + 0.5) * (y + 0.5))); ctx.fillStyle = ring; ctx.fillRect(mx - w, cy - y - 1, w * 2, 1); ctx.fillRect(mx - w, cy + y, w * 2, 1); }
+        };
+        const pulse = bass * 2.2;
+        for (const [cy, r] of [[by + 13, 6], [by + 33, 10]]) {
+          const rr = Math.round(r + pulse);
+          cone(cy, rr + 2, '#3a3f5c'); cone(cy, rr, '#08080d'); cone(cy, Math.max(2, Math.round(rr * 0.45)), '#2a2e40'); cone(cy, 2, '#6a7096');
+        }
+        X.rect(mx - 1, by + bh - 4, 2, 2, NV.G.player ? NV.G.player.hero.color : '#ff2e4a'); // led del color del DJ
       } else if (d.type === 'tree') {
         window.ART_DATA.deco.tree_bulbs.forEach(([bx, by], i) => X.rect(sx + bx, sy + by, 2, 2, (i + beat) % 2 ? ci(i + (beat >> 1), 5) : '#1a2a1a'));
       } else if (d.type === 'console') {

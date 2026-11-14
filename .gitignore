@@ -1,6 +1,7 @@
 # dependencias y datos locales
 node_modules/
 salva-la-navidance/data/scores.json
+salva-la-navidance/data/players.json
 salva-la-navidance/data/*.tmp
 
 # herramientas locales (IA, editores, sistema)
@@ -10,3 +11,17 @@ graphify-out/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# archivos demasiado pesados para GitHub (límite 100 MB por archivo)
+arte-fuente/FONT Y VIDEOS ANIMADOS/*.mov
+
+# ya no se usan (el menú reproduce assets/video/menu_logo.mp4)
+CONVERTIR VIDEO MENU.bat
+salva-la-navidance/assets/img/menu_intro.png
+salva-la-navidance/assets/img/menu_loop.png
+salva-la-navidance/js/data/menu-anim.js
+
+# subida a GitHub (archivos auxiliares)
+SUBIR A GITHUB.bat
+subida_github.log
+.commit_msg.txt

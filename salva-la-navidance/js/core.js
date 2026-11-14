@@ -3,7 +3,7 @@
 //  Todos los números del juego están acá para ajustarlos sin tocar la lógica.
 // =====================================================================
 window.NV = window.NV || {};
-NV.VERSION = 'grunon-gorro-1'; // cambiarlo en cada actualización del arte o la música (rompe la caché del navegador)
+NV.VERSION = 'robogrinch-10'; // cambiarlo en cada actualización del arte o la música (rompe la caché del navegador)
 
 NV.CFG = {
   // ---------- Pantalla ----------
@@ -31,11 +31,11 @@ NV.CFG = {
   INVULN: 70,
   SHOT_COOLDOWN: 8,       // mantener DISPARO = ráfaga automática
   SHOT_SPEED: 8.5,
-  SHOT_LIFE: 38,          // alcance ≈ 320 px
+  SHOT_LIFE: 47,          // alcance ≈ 400 px
   SHOT_DMG: 1,
   SHOT_MAX: 4,
   // ---------- Arma: se recalienta si disparás sin parar ----------
-  HEAT_SHOT: 14,          // calor por disparo (100 = sobrecalentada)
+  HEAT_SHOT: 10.5,        // calor por disparo (100 = sobrecalentada): ~11 tiros seguidos antes de trabarse
   HEAT_COOL: 0.5,         // enfriamiento por cuadro
   HEAT_COOL_LOCK: 1.3,    // enfriamiento por cuadro mientras está trabada
   HEAT_RESUME: 35,        // vuelve a disparar cuando baja de esto
@@ -43,6 +43,20 @@ NV.CFG = {
   DASH_COST: 40,          // 100 de energía = 2 dashes seguidos
   DASH_REGEN: 0.5,        // energía por cuadro (1 dash cada ~1,3 s)
   SHIELD_TIME: 8 * 60,    // el escudo te hace inmune 8 s y después se rompe
+
+  // ---------- ROBO-GRINCH (jefe): avisos antes de cada ataque ----------
+  BOSS: {
+    HP: 110,
+    SLOT: [8, 5],           // beats entre un ataque y el siguiente (fase 1, fase 2)
+    LASER_TRACK: [34, 24],  // cuadros que la mira punteada sigue al jugador
+    LASER_LOCK: [60, 48],   // cuadros con la mira FIJA antes de disparar (tiempo para esquivar: 1 s / 0,8 s)
+    LASER_FIRE: 28,         // cuadros que dura el rayo
+    ROCKETS: [4, 5],        // cohetes por llamada
+    ROCKET_WARN: [76, 62],  // cuadros entre que se marca dónde caen y el impacto (1,25 s / 1 s)
+    CANNON_LOCK: [46, 38],  // cuadros con la línea de tiro fija antes del primer disparo
+    CANNON_SHOTS: [3, 3],
+  },
+  BG_DIM: 0.52,           // cuánto se oscurece la ciudad del fondo (0 = como antes). Las luces de boliche no se tocan.
 
   // ---------- Combo y FIEBRE: encadenar enemigos sin parar te hace más rápido ----------
   COMBO_TIME: 150,        // cuadros para encadenar el siguiente enemigo (2,5 s)
@@ -70,11 +84,12 @@ NV.OPT = Object.assign({ music: 8, sfx: 7, vib: true, fx: true }, (() => { try {
 NV.saveOpt = () => { try { localStorage.setItem('navidance_opts', JSON.stringify(NV.OPT)); } catch (e) {} };
 
 NV.HEROES = {
-  ivan:   { name: 'AVILA IVAN',       short: 'IVAN',   color: '#ff2e4a', light: '#ff9aa8', dark: '#5c0815', role: 'ROJO' },
-  hades:  { name: 'BB HADES',         short: 'HADES',  color: '#4d8dff', light: '#b4cdff', dark: '#0b2463', role: 'AZUL' },
-  matias: { name: 'MATIAS TORRELLES', short: 'MATIAS', color: '#33e07a', light: '#a8ffc8', dark: '#0a4a25', role: 'VERDE' },
+  ivan:   { name: 'IVAN',     short: 'IVAN',     color: '#ff2e4a', light: '#ff9aa8', dark: '#5c0815', role: 'ROJO' },
+  hades:  { name: 'BB HADES', short: 'BB HADES', color: '#4d8dff', light: '#b4cdff', dark: '#0b2463', role: 'AZUL' },
+  matias: { name: 'MATIAS',   short: 'MATIAS',   color: '#33e07a', light: '#a8ffc8', dark: '#0a4a25', role: 'VERDE' },
 };
 NV.HERO_ORDER = ['ivan', 'hades', 'matias'];
+NV.BOSS_NAME = 'ROBO-GRINCH';
 
 // ---------------- utilidades ----------------
 NV.U = {

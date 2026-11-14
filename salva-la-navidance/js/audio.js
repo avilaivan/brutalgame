@@ -41,6 +41,7 @@
   // ---------------- MÚSICA ----------------
   A.play = function (k, from = 0) {
     if (!A.ctx) { A.pending = { k, from }; A.cur = k; A.fake0 = performance.now() / 1000 - from; return; }
+    if (A.cur === 'menu' && k !== 'menu' && A.el.menu) A.menuPos = A.el.menu.currentTime || A.menuPos;
     for (const o in A.el) if (o !== k) { A.el[o].pause(); }
     const el = A.el[k]; A.cur = k;
     el.muted = A.muted; el.volume = A.vol;
@@ -51,6 +52,18 @@
   A.preview = function (k) { // empieza en un punto con energía, alineado al beat
     const d = MD[k]; const bl = 60 / d.bpm; const t = d.offset + Math.round((d.duration * 0.28) / (bl * 4)) * bl * 4;
     A.play(k, t);
+  };
+  // canción del menú principal (Flower In A Hurricane). Se pausa al tocar JUGAR y, al volver al menú,
+  // RETOMA donde se había quedado (no arranca de cero).
+  A.menuPos = 0;
+  A.menuSong = function () {
+    if (!MD.menu) return;
+    if (A.cur === 'menu') { A.resume(); return; }
+    A.play('menu', A.menuPos || 0);
+  };
+  A.pauseMenu = function () {
+    if (A.cur !== 'menu') return;
+    const el = A.el.menu; if (el) { A.menuPos = el.currentTime || A.menuPos; el.pause(); }
   };
   A.stop = function () { for (const o in A.el) A.el[o].pause(); };
   A.pause = function () { if (A.cur) A.el[A.cur].pause(); };
@@ -152,6 +165,14 @@
       case 'overheat': noise(t, 0.6, 0.16, 'highpass', 2500, 6000); osc('sawtooth', 600, t, 0.35, 0.06, { to: 120 }); break;
       case 'cooled': osc('square', 880, t, 0.05, 0.05); osc('square', 1320, t + 0.05, 0.06, 0.05); break;
       case 'medal': osc('square', 140, t, 0.12, 0.2, { to: 60 }); noise(t, 0.18, 0.15, 'lowpass', 2500, 300); [79, 84, 88, 91].forEach((m, i) => osc('square', mtof(m), t + 0.12 + i * 0.06, 0.12, 0.06)); break;
+      // ---- Robo-Grinch ----
+      case 'lock': osc('square', 1760, t, 0.05, 0.07); osc('square', 1760, t + 0.09, 0.05, 0.07); osc('square', 2350, t + 0.18, 0.1, 0.07); break;       // mira fijada
+      case 'transform': [0, 0.06, 0.12, 0.18].forEach((d, i) => { osc('square', 180 + i * 90, t + d, 0.05, 0.06); noise(t + d, 0.04, 0.08, 'bandpass', 2400 + i * 500); }); break;
+      case 'cannon': noise(t, 0.3, 0.26, 'lowpass', 2600, 150); osc('square', 240, t, 0.18, 0.1, { to: 50 }); break;
+      case 'launch': noise(t, 0.6, 0.14, 'bandpass', 900, 3600); osc('sawtooth', 160, t, 0.5, 0.06, { to: 900 }); break;
+      case 'whistle': osc('sine', 1900, t, 0.45, 0.05, { to: 500 }); break;                                                                      // cohete cayendo
+      case 'zap': for (let i = 0; i < 5; i++) osc('square', 900 + Math.random() * 1500, t + i * 0.03, 0.03, 0.06); noise(t, 0.18, 0.1, 'highpass', 4000); break;
+      case 'alarm': osc('square', 620, t, 0.2, 0.09, { to: 880 }); osc('square', 620, t + 0.22, 0.2, 0.09, { to: 880 }); break;
       case 'timeout': [72, 67, 64, 60].forEach((m, i) => osc('square', mtof(m), t + i * 0.18, 0.22, 0.08)); break;
     }
   };

@@ -11,7 +11,12 @@
 //    SECRET=otra-clave         firma de los tokens anti-trampa
 //    MIN_SEC=35                tiempo mínimo aceptado (ajustarlo al récord real después de probar)
 //
-//  Los datos se guardan en data/scores.json (una línea por partida terminada).
+//  Los datos se guardan en data/players.json (un jugador por Instagram) y data/scores.json
+//  (historial: una línea por partida terminada).
+//
+//  Reglas del ranking:
+//   · El nombre puede ser cualquiera; el usuario de Instagram es ÚNICO (se registra una sola vez).
+//   · Cada Instagram juega las veces que quiera y figura UNA vez, con su MEJOR tiempo (no se acumulan).
 // =====================================================================
 const http = require('http');
 const fs = require('fs');
@@ -39,7 +44,19 @@ function save() {
   fs.renameSync(tmp, DB_FILE);
 }
 
-// mejor tiempo por jugador (Instagram)
+// ---------- jugadores: un registro por usuario de Instagram ----------
+const PL_FILE = path.join(DATA_DIR, 'players.json');
+let players = {};
+try { players = JSON.parse(fs.readFileSync(PL_FILE, 'utf8')); } catch (e) { players = {}; }
+// si hay partidas viejas sin jugador registrado (versión anterior), se registran solas
+for (const s of scores) if (s.ig && !players[s.ig]) players[s.ig] = { name: s.name, playerId: s.playerId, created: s.date };
+function savePlayers() {
+  const tmp = PL_FILE + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(players, null, 1));
+  fs.renameSync(tmp, PL_FILE);
+}
+
+// mejor tiempo de cada Instagram (una fila por jugador, con el nombre que tiene registrado ahora)
 function bestPerPlayer() {
   const best = new Map();
   for (const s of scores) {
@@ -47,8 +64,10 @@ function bestPerPlayer() {
     const b = best.get(k);
     if (!b || s.timeMs < b.timeMs || (s.timeMs === b.timeMs && s.coins > b.coins)) best.set(k, s);
   }
-  return [...best.values()].sort((a, b) => a.timeMs - b.timeMs || b.coins - a.coins || a.date - b.date);
+  return [...best.values()].map((s) => Object.assign({}, s, { name: (players[s.ig] && players[s.ig].name) || s.name }))
+    .sort((a, b) => a.timeMs - b.timeMs || b.coins - a.coins || a.date - b.date);
 }
+const bestOf = (ig) => { let b = 0; for (const s of scores) if (s.ig === ig && (!b || s.timeMs < b)) b = s.timeMs; return b; };
 
 // ---------- tokens anti-trampa ----------
 // El servidor firma el inicio de la partida y anota la largada ("¡YA!") con SU reloj.
@@ -103,7 +122,7 @@ function body(req) {
 }
 
 // ---------- archivos estáticos (con soporte de Range para el audio en iPhone) ----------
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg', '.mp3': 'audio/mpeg', '.ttf': 'font/ttf', '.json': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg', '.mp3': 'audio/mpeg', '.ttf': 'font/ttf', '.otf': 'font/otf', '.webm': 'video/webm', '.mp4': 'video/mp4', '.json': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json' };
 function serveStatic(req, res, urlPath) {
   let p = decodeURIComponent(urlPath.split('?')[0]);
   if (p === '/') p = '/index.html';
@@ -144,6 +163,21 @@ http.createServer(async (req, res) => {
 
   if (url.pathname === '/api/ping') return json(res, 200, { ok: true });
 
+  // Registro: el Instagram es único. Si ya está registrado desde otro dispositivo se contesta 409 con el
+  // nombre; el juego pregunta "¿sos vos?" y reintenta con confirm: true para seguir con ese mismo usuario.
+  if (url.pathname === '/api/register' && req.method === 'POST') {
+    const b = await body(req);
+    const name = clean(b.name, 16), ig = clean(b.ig, 30).toLowerCase().replace(/^@+/, ''), playerId = clean(b.playerId, 40);
+    if (name.length < 2) return json(res, 400, { error: 'Nombre inválido' });
+    if (!/^[a-z0-9._]{1,30}$/.test(ig)) return json(res, 400, { error: 'Instagram inválido' });
+    if (!playerId) return json(res, 400, { error: 'Falta jugador' });
+    const cur = players[ig];
+    if (cur && cur.playerId !== playerId && !b.confirm) return json(res, 409, { exists: true, name: cur.name });
+    if (cur) cur.name = name; else players[ig] = { name, playerId, created: Date.now() };
+    savePlayers();
+    return json(res, 200, { ok: true, playerId: players[ig].playerId, bestMs: bestOf(ig), isNew: !cur });
+  }
+
   if (url.pathname === '/api/run/start' && req.method === 'POST') {
     const b = await body(req);
     const playerId = clean(b.playerId, 40); if (!playerId) return json(res, 400, { error: 'Falta jugador' });
@@ -167,13 +201,19 @@ http.createServer(async (req, res) => {
     if (!HEROES.includes(hero)) return json(res, 400, { error: 'Personaje inválido' });
     if (!(timeMs >= MIN_MS && timeMs <= MAX_MS)) return json(res, 400, { error: 'Tiempo inválido' });
     const tErr = checkToken(b.token, playerId, timeMs); if (tErr) return json(res, 400, { error: tErr });
+    // el Instagram pertenece al jugador que lo registró
+    const pl = players[ig];
+    if (pl && pl.playerId !== playerId) return json(res, 409, { error: 'Ese Instagram ya está registrado: entrá de nuevo con tu usuario' });
+    if (!pl) players[ig] = { name, playerId, created: Date.now() }; else pl.name = name;
+    savePlayers();
+    const prevBest = bestOf(ig);
     usedTokens.add(b.token); goAt.delete(b.token);
     scores.push({ name, ig, hero, playerId, timeMs, coins, deaths, date: Date.now(), token: b.token, ip: crypto.createHash('sha1').update(ip).digest('hex').slice(0, 10) });
     save();
     const list = bestPerPlayer();
     const rank = list.findIndex((s) => s.ig === ig) + 1;
     console.log(`[${new Date().toLocaleTimeString()}] ${name} @${ig} ${hero} ${(timeMs / 1000).toFixed(2)}s -> puesto #${rank}`);
-    return json(res, 200, { rank, total: list.length, best: list[rank - 1].timeMs });
+    return json(res, 200, { rank, total: list.length, best: list[rank - 1].timeMs, improved: !prevBest || timeMs < prevBest });
   }
 
   if (url.pathname === '/api/ranking') {

@@ -8,23 +8,30 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#07060b">
   <title>SALVA LA NAVIDANCE · BRUTAL.</title>
-  <meta name="description" content="Elegí tu DJ, llegá a Don Gruñón y salvá la Navidance de 9 de Julio en el menor tiempo. Ranking de la fiesta BRUTAL.">
-  <link rel="icon" type="image/png" href="assets/img/favicon.png">
-  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+  <meta name="description" content="Elegí tu DJ, vencé a Robo-Grinch y salvá la Navidance de 9 de Julio en el menor tiempo. Ranking de la fiesta BRUTAL.">
+  <!-- favicon: la B-Coin en 8-bit (generada con tools/assets_v2.py) -->
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon.png?v=2">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/img/favicon-16.png?v=2">
+  <link rel="icon" type="image/png" sizes="48x48" href="assets/img/favicon-48.png?v=2">
+  <link rel="shortcut icon" href="favicon.ico?v=2">
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=2">
   <link rel="manifest" href="manifest.webmanifest">
   <!-- Vista previa al compartir el link (WhatsApp, Instagram, etc.). server.js reemplaza %ORIGIN% por la dirección real. -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="SALVA LA NAVIDANCE · BRUTAL.">
-  <meta property="og:description" content="Elegí tu DJ, llegá a Don Gruñón y salvá la Navidance de 9 de Julio en el menor tiempo. ¿Entrás al Top 3?">
+  <meta property="og:description" content="Elegí tu DJ, vencé a Robo-Grinch y salvá la Navidance de 9 de Julio en el menor tiempo. ¿Entrás al Top 3?">
   <meta property="og:image" content="%ORIGIN%/assets/img/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="preload" href="assets/fonts/brutal8.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="assets/fonts/akira8.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <canvas id="game"></canvas>
+  <!-- Logo animado del menú: VIDEO real en calidad completa, en loop, sin sonido y sin controles.
+       Tiene fondo negro: con mix-blend-mode "screen" el negro desaparece y queda solo el logo. -->
+  <video id="menuVideo" src="assets/video/menu_logo.mp4" muted loop playsinline webkit-playsinline preload="auto" disablepictureinpicture disableremoteplayback aria-hidden="true"></video>
 
   <!-- REGISTRO: nombre + usuario de Instagram -->
   <div id="reg" class="overlay hidden">
@@ -40,7 +47,7 @@
       <div id="regErr"></div>
       <button id="regGo" class="btn red">CONTINUAR ▶</button>
       <button id="regBack" class="btn">VOLVER</button>
-      <p class="tiny">Tu Instagram no se muestra en el ranking público.</p>
+      <p class="tiny">Tu Instagram no se muestra en el ranking público. Cada Instagram figura una sola vez, con su mejor tiempo.</p>
     </div>
   </div>
 
