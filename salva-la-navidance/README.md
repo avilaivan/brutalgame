@@ -38,7 +38,7 @@ Los datos se guardan en `data/players.json` (un jugador por Instagram) y `data/s
 ## 2. Reglas del juego
 
 - **Al abrir el juego:** logo de BRUTAL. en 8-bit → créditos en pantalla negra ("DESIGNED & PRODUCED BY" / **DKZ & AM**) → historia → menú. Cada pantalla de presentación dura 10 s (entrada, pantalla completa y fundido a negro); con los créditos ya empieza la canción del menú. Tocar o apretar una tecla adelanta.
-- **La historia:** es Nochebuena en **9 de Julio**, nieva sobre la ciudad y **ROBO-GRINCH** (mitad Grinch, mitad robot, con saco de Papá Noel) cortó la luz y se robó los parlantes de la Navidance. Tu DJ tiene que cruzar la ciudad y vencerlo. La intro son 4 escenas con cuadro de diálogo: tocar/tecla completa el texto, otra vez pasa a la siguiente; **SALTEAR** (o Esc) va directo al menú.
+- **La historia:** es Nochebuena en **9 de Julio**, nieva sobre la ciudad y **ROBO-GRINCH** (mitad Grinch, mitad robot, con saco de Papá Noel) cortó la luz y se robó el sonido de la Navidance. Tu DJ tiene que cruzar la ciudad y vencerlo. La intro son 4 escenas con cuadro de diálogo: tocar/tecla completa el texto, otra vez pasa a la siguiente; **SALTEAR** (o Esc) va directo al menú.
 - **Un solo nivel** con 3 zonas: **Ruta 5 nevada**, **Centro navideño** y **Autódromo**, con **ROBO-GRINCH** como jefe final.
 - **Enemigos:** Muñecos Patovica, Regalos Poseídos, Esferas Malditas y Duendes Traviesos (38 en todo el nivel). Están **siempre en el mismo lugar**: es una carrera, se puede aprender el recorrido.
 - **Combo y FIEBRE:** encadená 5 enemigos sin cortar el combo (2,5 s entre uno y otro) y entrás en **FIEBRE BRUTAL**: corrés más rápido mientras sigas el combo.
@@ -71,6 +71,7 @@ Los datos se guardan en `data/players.json` (un jugador por Instagram) y `data/s
 - En **FIEBRE** el arma se enfría y el dash se recarga más rápido.
 - **La fiesta sube a medida que avanzás:** láseres de escenario, luces más intensas, estroboscópico y público eufórico.
 - **Plataformas con tu color:** la base de las plataformas (no la nieve de arriba) toma el neón del DJ elegido: rojo, azul o verde.
+- **Luna disco:** en el cielo del fondo, en el mismo lugar donde estaba la luna, hay una bola de espejitos 8-bit que gira y brilla (`S.drawDisco` en `js/stage.js`).
 - **La ciudad del fondo va más oscura** durante la partida para que el piso, las plataformas y los personajes resalten (`BG_DIM` en `js/core.js`; 0 = como antes). Las luces audio-rítmicas no se tocan.
 
 ### Los 3 DJs

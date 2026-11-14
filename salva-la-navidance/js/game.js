@@ -131,7 +131,7 @@
         const n = 4 - (G.beat - G.countBeat);
         if (G.beatTick) { if (n > 0) { G.sfx('beep'); G.say(String(n), { scale: 6, life: 26, color: p.hero.light }); } else { G.sfx('go'); G.running = true; G.t0 = performance.now();
           // el servidor anota la largada: el tiempo final tiene que coincidir con su reloj
-          const pid = G.profile.id; G.tokenP.then((t) => NV.DB.go(t, pid)); G.say('¡YA!', { scale: 6, life: 40, color: '#f5c542', sub: 'LLEGÁ HASTA ROBO-GRINCH Y RECUPERÁ LOS PARLANTES', subColor: '#ffffff' }); } }
+          const pid = G.profile.id; G.tokenP.then((t) => NV.DB.go(t, pid)); G.say('¡YA!', { scale: 6, life: 40, color: '#f5c542', sub: 'LLEGÁ HASTA ROBO-GRINCH Y RECUPERÁ EL SONIDO', subColor: '#ffffff' }); } }
       }
     }
     if (G.running) {
@@ -153,7 +153,7 @@
       }
       if (G.boss && G.boss.landed && G.introLock) {
         G.introLock = false; G.introT = 0; G.vsT = 0;
-        G.say('¡' + NV.BOSS_NAME + '!', { scale: 3, life: 120, color: '#ff2e4a', sub: 'SE ROBÓ LOS PARLANTES · MIRÁ LAS LÍNEAS PUNTEADAS: AVISA ANTES DE CADA ATAQUE' });
+        G.say('¡' + NV.BOSS_NAME + '!', { scale: 3, life: 120, color: '#ff2e4a', sub: 'SE ROBÓ EL SONIDO · MIRÁ LAS LÍNEAS PUNTEADAS: AVISA ANTES DE CADA ATAQUE' });
         G.bossWake = G.beat + 4 - (G.beat & 3) + 4; // empieza a atacar en el compás siguiente
       }
     }

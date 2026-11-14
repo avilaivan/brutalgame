@@ -71,8 +71,8 @@ def sky():
         c = P['white'] if b > 0.92 else P['stone2'] if b > 0.6 else P['sil4']
         px(im, x, y, c)
         if b > 0.97: px(im, x - 1, y, P['stone1']); px(im, x + 1, y, P['stone1']); px(im, x, y - 1, P['stone1']); px(im, x, y + 1, P['stone1'])
-    # luna llena con cráteres y halo
-    mx, my, r = 520, 62, 20
+    # (la luna se reemplazó por la bola de disco que dibuja el juego en js/stage.js: S.drawDisco)
+    mx, my, r = -999, -999, 0
     for y in range(-r - 8, r + 9):
         for x in range(-r - 8, r + 9):
             dd = math.hypot(x, y)
@@ -81,7 +81,7 @@ def sky():
                 im.putpixel((mx + x, my + y), c)
             elif dd <= r + 8 and (x + y) % 2 == 0 and dd <= r + 4 + (x % 3):
                 im.putpixel((mx + x, my + y), lerp(P['night1'], P['stone1'], 0.35))
-    for cx, cy, cr in ((-6, -5, 4), (5, 3, 3), (-2, 8, 2), (8, -7, 2)):
+    for cx, cy, cr in ():
         d.ellipse([mx + cx - cr, my + cy - cr, mx + cx + cr, my + cy + cr], fill=P['stone2'])
     # nubes finas
     for cy, cx0, ln in ((110, 40, 180), (128, 300, 140), (96, 380, 90), (150, 520, 120)):
@@ -402,7 +402,7 @@ def trineo(im, d, x, y):
 
 def navidad_fondo():
     sky_p = os.path.join(BG, 'sky.png'); im = Image.open(sky_p).convert('RGBA'); d = ImageDraw.Draw(im)
-    trineo(im, d, 488, 54); im.save(sky_p)
+    im.save(sky_p)  # (el trineo cruzaba la luna: ahora hay una bola de disco)
     for name in ('far', 'near'): nevar(os.path.join(BG, name + '.png'), 3 if name != 'far' else 2)
     # árbol gigante en la plaza (capa media) + luces en los techos
     mp = os.path.join(BG, 'mid.png'); im = Image.open(mp).convert('RGBA'); d = ImageDraw.Draw(im)

@@ -55,6 +55,61 @@
     // Durante la partida la ciudad del fondo va más oscura: así el piso, las plataformas y los personajes
     // resaltan. Las luces de boliche, láseres y guirnaldas se dibujan DESPUÉS, así que quedan igual de brillantes.
     if (G.state === 'play' && NV.CFG.BG_DIM > 0) { ctx.fillStyle = 'rgba(4,3,12,' + NV.CFG.BG_DIM + ')'; ctx.fillRect(0, 0, W, 360); }
+    S.drawDisco(ctx, G); // la luna disco, en el lugar de la luna del cielo; va después del oscurecido para que brille
+  };
+
+  // ===================== LUNA DISCO (reemplaza a la luna) =====================
+  // Esfera de espejitos en 8-bit en el lugar exacto de la luna del cielo: gira, cada faceta refleja la luz según
+  // hacia dónde mira, algunas destellan al ritmo y tiene el halo suave que tenía la luna.
+  const DR = 20, DS = DR * 2 + 2;
+  let discoCv = null, discoCtx = null;
+  function discoSphere(G) {
+    if (!discoCv) { discoCv = document.createElement('canvas'); discoCv.width = discoCv.height = DS; discoCtx = discoCv.getContext('2d'); }
+    const g = discoCtx, t = G.frame / 60, rot = t * 0.9, beat = G.beat, bp = G.beatPos || 0;
+    g.clearRect(0, 0, DS, DS);
+    const NL = 14, NT = 9;                                  // facetas: 14 a lo ancho (por media vuelta) y 9 de alto
+    const L = [-0.55, -0.6, 0.58];                          // luz desde arriba a la izquierda
+    for (let py = 0; py < DS; py++) for (let px = 0; px < DS; px++) {
+      const nx = (px + 0.5 - DS / 2) / DR, ny = (py + 0.5 - DS / 2) / DR, d2 = nx * nx + ny * ny;
+      if (d2 > 1) continue;
+      const nz = Math.sqrt(1 - d2);
+      const lon = Math.atan2(nx, nz) + rot, lat = Math.asin(ny);
+      const fu = ((lon / Math.PI) * NL % NL + NL) % NL, fv = (lat / Math.PI + 0.5) * NT;
+      const iu = Math.floor(fu), iv = Math.floor(fv), du = fu - iu, dv = fv - iv;
+      let c;
+      if (du < 0.14 || dv < 0.14) c = '#1c1d2c';                       // junta entre espejitos
+      else {
+        const lit = Math.max(0, -(nx * L[0] + ny * L[1]) + nz * L[2]);
+        const h = ((iu * 73 + iv * 151) % 97) / 97;
+        const flash = (h * 7.3 + bp * 0.5) % 1;
+        if (flash < 0.07 && lit > 0.15) c = COLS[(iu + iv + beat) % COLS.length];   // destello de color
+        else if (flash > 0.93 && lit > 0.35) c = '#ffffff';
+        else { const k = Math.min(1, 0.22 + lit * 0.9 + (h - 0.5) * 0.25); const v = Math.round(60 + k * 175); c = 'rgb(' + (v - 8) + ',' + (v - 4) + ',' + Math.min(255, v + 18) + ')'; }
+      }
+      g.fillStyle = c; g.fillRect(px, py, 1, 1);
+    }
+    // borde oscuro de 1 píxel (lectura 8-bit)
+    g.globalCompositeOperation = 'destination-over'; g.fillStyle = '#0b0a12'; g.beginPath(); g.arc(DS / 2, DS / 2, DR + 1, 0, Math.PI * 2); g.fill(); g.globalCompositeOperation = 'source-over';
+    return discoCv;
+  }
+  S.drawDisco = function (ctx, G) {
+    const W = NV.X.W, X = NV.X, t = G.frame, bass = G.bass || 0;
+    for (let ox = 0; ox < W; ox += 640) {          // el cielo se repite cada 640 px, la luna iba en (520, 62)
+      const cx = ox + 520, cy = 54; if (cx - 40 > W) continue;
+      // halo suave, como el de la luna
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const halo = ctx.createRadialGradient(cx, cy, DR * 0.8, cx, cy, DR * 2.1);
+      halo.addColorStop(0, 'rgba(190,205,255,' + (0.16 + bass * 0.06) + ')'); halo.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = halo; ctx.fillRect(cx - 44, cy - 44, 88, 88); ctx.restore();
+      ctx.drawImage(discoSphere(G), cx - DS / 2, cy - DS / 2);
+      // destellos: crucecitas 8-bit que titilan sobre la bola
+      for (let i = 0; i < 3; i++) {
+        const ph = (t + i * 29) % 58; if (ph > 12) continue;
+        const k = Math.round(ph < 6 ? ph / 2 : (12 - ph) / 2), a = i * 2.3 + Math.floor((t + i * 29) / 58) * 1.9;
+        const sx = Math.round(cx + Math.cos(a) * DR * 0.55), sy = Math.round(cy + Math.sin(a) * DR * 0.5);
+        X.rect(sx - k, sy, k * 2 + 1, 1, '#ffffff'); X.rect(sx, sy - k, 1, k * 2 + 1, '#ffffff');
+      }
+    }
   };
 
   // PLATAFORMAS CON EL NEÓN DEL DJ: la nieve de arriba queda blanca; la base toma el color del personaje

@@ -120,10 +120,10 @@
   const PAGES = [
     { who: 'NOCHEBUENA · 9 DE JULIO', color: '#4de2ff', scene: 'party', lines: ['LA NAVIDANCE DE BRUTAL. ESTÁ A FULL.', 'TODA LA CIUDAD BAILA BAJO LA NIEVE...'] },
     { who: '???', color: '#8ea2c4', scene: 'dark', lines: ['¡SE CORTÓ LA LUZ!', 'ALGO ENORME CAYÓ SOBRE EL ESCENARIO.'] },
-    { who: 'ROBO-GRINCH', color: '#ff2e4a', scene: 'boss', lines: ['"ODIO LA NAVIDAD. Y ODIO SU MÚSICA."', 'SE ROBÓ LOS PARLANTES DE LA FIESTA.'] },
-    { who: 'BRUTAL.', color: '#f5c542', scene: 'djs', lines: ['¡SOLO UN DJ PUEDE SALVAR LA NAVIDANCE!', 'ELEGÍ EL TUYO Y RECUPERÁ LOS PARLANTES.'] },
+    { who: 'ROBO-GRINCH', color: '#ff2e4a', scene: 'boss', lines: ['"ODIO LA NAVIDAD. Y ODIO SU MÚSICA."', 'SE ROBÓ EL SONIDO DE LA FIESTA.'] },
+    { who: 'BRUTAL.', color: '#f5c542', scene: 'djs', lines: ['¡SOLO UN DJ PUEDE SALVAR LA NAVIDANCE!', 'ELEGÍ EL TUYO Y RECUPERÁ EL SONIDO.'] },
   ];
-  const TYPE = 1.8, HOLD = 430; // cuadros por letra y espera antes de avanzar sola (~7 s con el texto completo, para leer tranquilo)
+  const TYPE = 2.6, HOLD = 600; // cuadros por letra y espera antes de avanzar sola (~10 s con el texto completo, para que todos lleguen a leer)
   S.story = {
     enter(G) { G.sp = 0; G.st = 0; G.sfade = 0; NV.Audio.menuSong(); },
     draw(ctx, G) {

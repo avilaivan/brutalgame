@@ -3,7 +3,7 @@
 //  Todos los números del juego están acá para ajustarlos sin tocar la lógica.
 // =====================================================================
 window.NV = window.NV || {};
-NV.VERSION = 'robogrinch-10'; // cambiarlo en cada actualización del arte o la música (rompe la caché del navegador)
+NV.VERSION = 'robogrinch-14'; // cambiarlo en cada actualización del arte o la música (rompe la caché del navegador)
 
 NV.CFG = {
   // ---------- Pantalla ----------
