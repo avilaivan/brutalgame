@@ -114,6 +114,7 @@
     const g = A.ctx.createGain(); s.connect(fl); fl.connect(g); g.connect(sfxBus); env(g, t, 0.002, v, d); s.start(t, Math.random() * 0.4); s.stop(t + d + 0.05);
   }
   let coinStep = 0, coinT = 0;
+  A.resetCoins = () => { coinStep = 0; }; // se corta el combo: la escala de las monedas vuelve a empezar
   A.sfx = function (n) {
     if (!A.ctx || A.muted) return;
     const t = now();
@@ -134,6 +135,10 @@
       case 'shield': [60, 67, 72, 79, 84].forEach((m, i) => osc('triangle', mtof(m), t + i * 0.05, 0.14, 0.1)); break;
       case 'shield_break': noise(t, 0.35, 0.18, 'highpass', 4000, 9000); [84, 79, 72].forEach((m, i) => osc('square', mtof(m), t + i * 0.06, 0.08, 0.06)); break;
       case 'heal': [64, 68, 71, 76].forEach((m, i) => osc('triangle', mtof(m), t + i * 0.06, 0.12, 0.09)); break;
+      // vas más rápido que tu récord en este checkpoint: arpegio brillante que sube
+      case 'ahead': [79, 83, 86, 91, 95].forEach((m, i) => osc('triangle', mtof(m), t + i * 0.045, 0.16, 0.08)); osc('square', mtof(103), t + 0.24, 0.2, 0.04); break;
+      // esquivaste por poco una bala
+      case 'nearmiss': osc('sine', 1600, t, 0.12, 0.05, { to: 2600 }); break;
       case 'checkpoint': [67, 72, 76, 79, 84].forEach((m, i) => osc('square', mtof(m), t + i * 0.06, 0.1, 0.06)); break;
       case 'beep': osc('square', 660, t, 0.12, 0.09); break;
       case 'go': osc('square', 1320, t, 0.35, 0.1); osc('square', 660, t, 0.35, 0.06); break;

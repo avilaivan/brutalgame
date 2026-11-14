@@ -378,7 +378,7 @@
 
   // ---------------- RESULTADOS ----------------
   S.results = {
-    enter(G) { G.mi = 0; G.rt = G.rankBack === 'results' ? 60 : 0; G.rankBack = null; G.confetti = []; G.top3 = null; NV.DB.top(3).then((r) => { G.top3 = r; }); },
+    enter(G) { const back = G.rankBack === 'results'; G.mi = 0; G.rt = back ? 200 : 0; G.rkT0 = back ? -999 : null; G.cheered = back; G.rankBack = null; G.confetti = []; G.top3 = null; NV.DB.top(3).then((r) => { G.top3 = r; }); },
     draw(ctx, G) {
       const X = NV.X, W = X.W, R = G.result, h = NV.HEROES[R.hero], rk = G.submit;
       const t = ++G.rt;
@@ -398,10 +398,19 @@
       let rkTxt = 'GUARDANDO...', rkCol = '#8ea2c4';
       if (rk && rk.queued) { rkTxt = 'SIN SEÑAL · REINTENTANDO'; rkCol = '#f5c542'; }
       else if (rk && rk.error) { rkTxt = 'NO ENTRÓ AL RANKING'; rkCol = '#ff2e4a'; }
-      else if (rk && rk.rank) { rkTxt = 'PUESTO #' + rk.rank + (rk.total ? ' DE ' + rk.total : ''); rkCol = rk.rank <= 3 ? '#f5c542' : '#ffffff'; }
+      else if (rk && rk.rank) {
+        // el puesto "sube" desde el último hasta el tuyo
+        if (G.rkT0 === null) G.rkT0 = Math.max(t, 40); // arranca cuando terminó de contar el tiempo
+        const k = U.clamp((t - G.rkT0) / 40, 0, 1), e = 1 - Math.pow(1 - k, 3), from = Math.max(rk.rank, rk.total || rk.rank);
+        const shownRank = Math.round(from + (rk.rank - from) * e);
+        rkTxt = 'PUESTO #' + shownRank + (rk.total ? ' DE ' + rk.total : ''); rkCol = k >= 1 && rk.rank <= 3 ? '#f5c542' : '#ffffff';
+        if (k < 1 && t % 3 === 0 && shownRank !== rk.rank) NV.Audio.sfx('move');
+        // festejo: TOP 3 o récord personal (una sola vez)
+        if (k >= 1 && !G.cheered) { G.cheered = true; if (rk.rank <= 3 || R.pb) { NV.Audio.sfx('cheer'); NV.Audio.sfx(rk.rank <= 3 ? 'fever' : 'jingle'); G.hype = 200; } }
+      }
       X.text(rkTxt, W / 2 + 22, 120, { scale: 2, align: 'center', color: rkCol, outline: true });
       if (rk && rk.error) X.text(rk.error.toUpperCase(), W / 2 + 22, 140, { align: 'center', color: '#8ea2c4' });
-      else if (rk && rk.rank && rk.rank <= 3) X.text('¡ESTÁS EN EL TOP 3! TE VAMOS A ESCRIBIR', W / 2 + 22, 140, { align: 'center', color: '#f5c542' });
+      else if (rk && rk.rank && rk.rank <= 3 && t >= G.rkT0 + 40) X.text('¡ESTÁS EN EL TOP 3! TE VAMOS A ESCRIBIR', W / 2 + 22, 140, { align: 'center', color: '#f5c542' });
       else if (rk && rk.rank && G.top3 && G.top3[2]) {
         // lo que falta para el premio: el empujón para jugar otra vez
         const gap = R.time - G.top3[2].timeMs / 1000;
@@ -423,7 +432,10 @@
       // estadísticas
       X.rect(W / 2 - 96, 176, 304, 1, '#2a3350');
       const stat = (label, val, x, col) => { X.text(label, x, 186, { align: 'center', color: '#5d6a8a' }); X.text(String(val), x, 198, { scale: 2, align: 'center', color: col }); };
-      stat('B-COINS', R.coins, W / 2 - 44, '#f5c542'); stat('CAÍDAS', R.deaths, W / 2 + 56, '#cfd8e6'); stat('PUNTOS', R.score, W / 2 + 156, '#cfd8e6');
+      // las B-Coins y los puntos se cuentan (con la escalita de las monedas) después del tiempo
+      const kc = U.clamp((t - 30) / 36, 0, 1);
+      if (kc > 0 && kc < 1 && t % 4 === 0) NV.Audio.sfx('coin');
+      stat('B-COINS', Math.round(R.coins * kc), W / 2 - 44, '#f5c542'); stat('CAÍDAS', R.deaths, W / 2 + 56, '#cfd8e6'); stat('PUNTOS', Math.round(R.score * kc), W / 2 + 156, '#cfd8e6');
       if (rk && rk.local) X.text('RANKING GUARDADO SOLO EN ESTE DISPOSITIVO', W / 2, 228, { align: 'center', color: '#5d6a8a' });
       // confeti en récord personal o top 3
       if ((R.pb || (rk && rk.rank && rk.rank <= 3)) && G.confetti.length < 120 && t % 2 === 0) for (let i = 0; i < 3; i++) G.confetti.push({ x: U.rand(0, W), y: -6, vx: U.rand(-0.6, 0.6), vy: U.rand(0.8, 2), c: U.pick(['#f5c542', '#ff2e4a', '#4de2ff', '#33e07a', '#ff4fd8', '#ffffff']), r: U.rand(0, 6) });

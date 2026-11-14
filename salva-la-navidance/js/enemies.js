@@ -93,7 +93,7 @@
     const chain = G.player.chain || 1;
     const pts = how === 'stomp' ? C.STOMP_PTS * chain : C.KILL_PTS;
     G.score += pts; G.kills++; G.addCombo(cx, e.y);
-    FX.text(G, how === 'stomp' ? (chain > 1 ? '¡PISOTÓN x' + chain + '!' : '¡PISOTÓN!') : '+' + pts, cx, e.y - 6, how === 'stomp' ? '#f5c542' : '#ffffff', 1);
+    FX.text(G, how === 'stomp' ? (chain > 1 ? '¡PISOTÓN x' + chain + '!' : '¡PISOTÓN!') : '+' + pts, cx, e.y - 6, how === 'stomp' ? '#f5c542' : '#ffffff', chain > 1 || G.combo >= C.FEVER_AT ? 2 : 1);
     for (let i = 0; i < 2; i++) G.coins.push(NV.Coin(cx, cy, true));
   };
 

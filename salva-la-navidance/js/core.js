@@ -13,7 +13,7 @@ NV.CFG = {
 
   // ---------- Reglas de la competencia ----------
   TIME_LIMIT: 180,        // 3 minutos máximo por partida
-  RESPAWN_DELAY: 75,      // cuadros que dura la animación de muerte antes de reaparecer
+  RESPAWN_DELAY: 62,      // cuadros que dura la animación de muerte antes de reaparecer
 
   // ---------- Jugador (iguales para los 3 personajes) ----------
   HP: 4,

@@ -56,7 +56,13 @@
       for (const b of G.booms) NV.X.spr('boom', Math.floor(b.t / 4), b.x - cx, b.y - cy + 17, { scale: b.big ? 2 : 1 });
     },
     drawTexts(G, cx, cy) {
-      for (const t of G.texts) NV.X.text(t.s, t.x - cx, t.y - cy, { scale: t.scale, align: 'center', color: t.color, outline: true, alpha: Math.min(1, t.life / 15) });
+      // los textos aparecen con un "pop" (crecen y vuelven a su tamaño en 6 cuadros)
+      const ctx = NV.X.ctx;
+      for (const t of G.texts) {
+        const age = t.max - t.life, pop = age < 6 && NV.OPT.fx ? 1 + ((6 - age) / 6) * 0.6 : 1, x = Math.round(t.x - cx), y = Math.round(t.y - cy);
+        if (pop > 1) { ctx.save(); ctx.translate(x, y); ctx.scale(pop, pop); NV.X.text(t.s, 0, 0, { scale: t.scale, align: 'center', color: t.color, outline: true }); ctx.restore(); }
+        else NV.X.text(t.s, x, y, { scale: t.scale, align: 'center', color: t.color, outline: true, alpha: Math.min(1, t.life / 15) });
+      }
     },
   };
 })();

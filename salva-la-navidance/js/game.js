@@ -60,7 +60,8 @@
     if (G.bossOn) { const A0 = G.L.arena; G.respawnAt({ x: A0.x0 + 48, y: A0.floorY }); if (G.boss) G.boss.rockets = []; }
     else G.respawnAt(G.L.checkpoints[G.cp]);
     G.flash('#ffffff', 6);
-    FX.text(G, '¡DE NUEVO!', G.player.x + 7, G.player.y - 10, G.player.hero.light);
+    FX.text(G, ['¡CASI!', '¡OTRA VEZ!', '¡VAMOS!', '¡DALE!'][G.deaths % 4], G.player.x + 7, G.player.y - 10, G.player.hero.light, 2, 45);
+    if (G.deaths === 1 || G.deaths % 3 === 0) G.say('TIP', { sub: TIPS[(G.tip + G.deaths) % TIPS.length], life: 120, scale: 1, color: '#f5c542' });
   };
   G.pitFall = function () {
     const p = G.player;
@@ -82,7 +83,7 @@
     }
     if (G.combo > C.FEVER_AT) G.score += 100 * G.combo;
   };
-  G.breakCombo = function () { if (G.combo >= C.FEVER_AT) FX.text(G, 'FIEBRE PERDIDA', G.player.x + 7, G.player.y - 20, '#8ea2c4', 1, 40); G.combo = 0; G.comboT = 0; };
+  G.breakCombo = function () { A.resetCoins(); if (G.combo >= C.FEVER_AT) FX.text(G, 'FIEBRE PERDIDA', G.player.x + 7, G.player.y - 20, '#8ea2c4', 1, 40); G.combo = 0; G.comboT = 0; };
 
   G.getCoin = function (x, y) {
     G.coinsGot++; G.score += C.COIN_PTS; G.sfx('coin'); G.coinPop = 8;
@@ -194,7 +195,10 @@
       if (p.x > c.x && !p.dead) {
         G.cp = i; G.splits[i] = G.runTime; G.sfx('checkpoint'); G.sfx('jingle');
         const pbS = NV.DB.splits()[i]; let sub = U.fmtTime(G.runTime), sc = '#ffffff';
-        if (pbS) { const d = G.runTime - pbS; sub += '  ' + (d < 0 ? '-' : '+') + Math.abs(d).toFixed(2); sc = d < 0 ? '#33e07a' : '#ff2e4a'; }
+        if (pbS) {
+          const d = G.runTime - pbS; sub += '  ' + (d < 0 ? '-' : '+') + Math.abs(d).toFixed(2) + ' VS TU RÉCORD'; sc = d < 0 ? '#33e07a' : '#ff2e4a';
+          if (d < 0) { G.sfx('ahead'); G.flash('#33e07a', 6); G.vib([15, 30, 15]); }
+        }
         G.say(c.label, { sub, subColor: sc, life: 100 }); G.hype = 50;
         if (i < L.checkpoints.length - 1) dropFX(i); // zonas 2 y 3 (el jefe tiene su presentación)
       }
@@ -260,6 +264,12 @@
       if (!p.dead && hitRect(b, NV.playerBox(p))) {
         if (b.bomb) { explode(b); continue; }
         if (NV.hurtPlayer(p, G, b.x) || p.shield > 0) { b.dead = true; if (p.shield > 0) FX.burst(G, b.x, b.y, '#f5c542', 5, 1.5, 10, 0, 1); }
+      }
+      // ¡CASI!: la bala pasó rozando (a menos de 12 px) y no te pegó
+      if (!b.dead && !b.bomb && !p.dead && p.invuln === 0) {
+        const pb = NV.playerBox(p), dx = Math.max(pb.x - b.x, 0, b.x - pb.x - pb.w), dy = Math.max(pb.y - b.y, 0, b.y - pb.y - pb.h), d = Math.hypot(dx, dy) - b.r;
+        if (!b.nm && d < 12) b.nm = 1;
+        else if (b.nm === 1 && d > 24) { b.nm = 2; G.score += 50; G.sfx('nearmiss'); FX.text(G, '¡CASI! +50', p.x + 7, p.y - 8, '#4de2ff', 1, 40); }
       }
     }
     G.bullets = G.bullets.filter((b) => !b.dead);
@@ -358,6 +368,10 @@
     FX.drawTexts(G, cx, cy);
     if (G.flashT > 0) { ctx.globalAlpha = G.flashT / 18; ctx.fillStyle = G.flashC; ctx.fillRect(0, 0, W, 360); ctx.globalAlpha = 1; G.flashT--; }
     NV.Stage.drawStrobe(ctx, G);
+    if (G.fever() && NV.OPT.fx && G.phase < 0.18 && !G.player.dead) {
+      const k = 1 - G.phase / 0.18, col = ['#ff4fd8', '#4de2ff', '#f5c542', '#33e07a'][G.beat & 3];
+      ctx.globalAlpha = 0.55 * k; X.rect(0, 0, W, 4, col); X.rect(0, 356, W, 4, col); X.rect(0, 0, 4, 360, col); X.rect(W - 4, 0, 4, 360, col); ctx.globalAlpha = 1;
+    }
     // última vida: el borde de la pantalla late en rojo
     if (G.player.hp === 1 && !G.player.dead) { ctx.globalAlpha = 0.35 + 0.25 * Math.sin(G.frame * 0.15); ctx.drawImage(vignette(), 0, 0, W, 360); ctx.globalAlpha = 1; }
     NV.HUD.draw(ctx, G);
@@ -369,7 +383,7 @@
       X.rect(W / 2 - X.measure(tip) / 2 - 6, 238, X.measure(tip) + 12, 16, 'rgba(5,4,12,.8)');
       X.text(tip, W / 2, 242, { align: 'center', color: '#f5c542' });
     }
-    if (IN.isTouch && !G.paused) { const r = X.button('II', W - 20, 64, 26, 20, { scale: 1 }); if (IN.inRect(G.tapThisFrame, r)) G.pauseTap = true; }
+    if (IN.isTouch && !G.paused) { const r = X.button('II', W - 20, 76, 26, 20, { scale: 1 }); if (IN.inRect(G.tapThisFrame, r)) G.pauseTap = true; }
     if (G.introT) drawAlarm(ctx);
     if (G.vsT) drawVS(ctx);
     if (G.paused) NV.Screens.pause(ctx, G);
