@@ -396,7 +396,8 @@
       if (R.pb) X.text('¡NUEVO RÉCORD PERSONAL!', W / 2 + 22, 104, { align: 'center', color: (G.frame >> 3) % 2 ? '#f5c542' : '#ff2e4a', outline: true });
       else if (R.prevBest) X.text('TU RÉCORD: ' + U.fmtTime(R.prevBest), W / 2 + 22, 104, { align: 'center', color: '#8ea2c4' });
       let rkTxt = 'GUARDANDO...', rkCol = '#8ea2c4';
-      if (rk && rk.error) { rkTxt = 'NO ENTRÓ AL RANKING'; rkCol = '#ff2e4a'; }
+      if (rk && rk.queued) { rkTxt = 'SIN SEÑAL · REINTENTANDO'; rkCol = '#f5c542'; }
+      else if (rk && rk.error) { rkTxt = 'NO ENTRÓ AL RANKING'; rkCol = '#ff2e4a'; }
       else if (rk && rk.rank) { rkTxt = 'PUESTO #' + rk.rank + (rk.total ? ' DE ' + rk.total : ''); rkCol = rk.rank <= 3 ? '#f5c542' : '#ffffff'; }
       X.text(rkTxt, W / 2 + 22, 120, { scale: 2, align: 'center', color: rkCol, outline: true });
       if (rk && rk.error) X.text(rk.error.toUpperCase(), W / 2 + 22, 140, { align: 'center', color: '#8ea2c4' });
@@ -547,7 +548,7 @@
       if (!G.rank) X.text('CARGANDO...', W / 2, 150, { scale: 2, align: 'center', color: '#8ea2c4' });
       else if (!G.rank.length) X.text(G.rankErr ? 'NO SE PUDO CARGAR EL RANKING' : 'TODAVÍA NADIE TERMINÓ EL NIVEL. ¡SÉ EL PRIMERO!', W / 2, 150, { align: 'center', color: '#8ea2c4' });
       else G.rank.slice(0, 10).forEach((r, i) => {
-        const y = 64 + i * 22, mine = me && (r.player === me.id || (r.mine));
+        const y = 64 + i * 22, mine = me && me.id && (r.id === me.id || r.player === me.id);
         const col = i === 0 ? '#f5c542' : i === 1 ? '#dfe6f5' : i === 2 ? '#e0904a' : '#cfd8e6', h = NV.HEROES[r.hero] || NV.HEROES.ivan;
         if (mine) X.rect(L + 6, y - 3, 508, 20, 'rgba(255,255,255,.12)');
         X.text(String(i + 1), L + 12, y, { scale: 2, color: col, maxW: 30 });

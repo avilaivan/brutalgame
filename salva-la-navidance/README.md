@@ -26,10 +26,12 @@ Si no la definís, el servidor genera una clave al azar cada vez que arranca y l
 
 ```
 # Windows (PowerShell)
-$env:ADMIN_KEY="tu-clave-secreta"; npm start
+$env:ADMIN_KEY="tu-clave-secreta"; $env:SECRET="otra-clave-larga"; npm start
 # Mac / Linux
-ADMIN_KEY=tu-clave-secreta npm start
+ADMIN_KEY=tu-clave-secreta SECRET=otra-clave-larga npm start
 ```
+
+`SECRET` firma los tokens de cada partida: si no la fijás, se genera una al azar y un reinicio del servidor invalida las partidas que estaban en curso.
 
 Los datos se guardan en `data/players.json` (un jugador por Instagram) y `data/scores.json` (historial de partidas). Para empezar el ranking de cero, borrá esos dos archivos con el servidor apagado.
 
@@ -49,7 +51,8 @@ Los datos se guardan en `data/players.json` (un jugador por Instagram) y `data/s
 
 ### Ranking (nombre + Instagram)
 - El **nombre** puede ser cualquiera. El **usuario de Instagram es único**: se registra una sola vez.
-- Si alguien pone un Instagram que ya está registrado (por ejemplo, la misma persona desde otro celular), el juego avisa y pide confirmar **"SOY YO, SEGUIR"**: sigue con ese mismo usuario y su mejor tiempo.
+- Al registrarse, el celular recibe una **clave secreta** (el servidor guarda solo su hash). Ese Instagram queda atado a ese celular: nadie puede usarlo ni "tomarlo" desde otro dispositivo.
+- Si el dueño cambió de celular, el organizador lo libera desde `admin.html` (botón **LIBERAR**): el próximo registro con ese Instagram recibe una clave nueva y conserva su mejor tiempo.
 - Cada Instagram puede jugar las veces que quiera. En el ranking figura **una sola vez**, con su **mejor tiempo** (un tiempo mejor **reemplaza** al anterior; no se acumulan). Desempata el que juntó más B-Coins.
 - El ranking muestra: **NOMBRE · PERSONAJE elegido · TIEMPO**. El Instagram no se muestra en público (solo en el panel admin).
 - **Sombra (ghost):** tu mejor partida corre al lado tuyo como silueta blanca. Es siempre la del mismo jugador (se guarda por Instagram en cada dispositivo).
@@ -113,9 +116,9 @@ Entrada: alarma, presentación **VS** y cae del cielo sobre su tarima. Ataca al 
 2. En `js/core.js` completá `SUPABASE: { url: '...', anonKey: '...' }`.
 3. Los Instagram se ven en Supabase → *Table Editor* → `players`.
 
-> **Anti-trampa:** con `server.js`, cada partida recibe un token firmado y el servidor anota la largada con su propio reloj. Rechaza tiempos que no coinciden con lo que midió él (±3 s), tiempos por debajo de `MIN_SEC` (35 s por defecto) y partidas repetidas. Con Supabase no hay esa validación: antes de entregar premios conviene revisar el Top.
+> **Anti-trampa:** cada partida recibe un token firmado, atado al Instagram, que vence y se usa una sola vez. El servidor anota con su propio reloj la largada y la llegada, y rechaza tiempos que no coinciden con lo que midió él (±3 s), tiempos por debajo de `MIN_SEC` (35 s por defecto; nunca menos que el mínimo físico que calcula con el nivel, ~29 s), valores imposibles (B-Coins, caídas, personaje) y partidas repetidas. Supabase aplica las mismas reglas desde sus funciones. Igual, a los ganadores conviene pedirles que repitan una partida en persona: nadie puede impedir que un experto programe un bot que juegue de verdad.
 >
-> **Sobre el "soy yo":** no hay contraseña (es un juego de fiesta), así que confirmar un Instagram ya registrado es de buena fe. A los ganadores conviene pedirles que repitan una partida en persona.
+> **Seguridad del servidor:** solo sirve los archivos públicos (`index.html`, `admin.html`, `assets/`, `js/`, `css/`), con cabeceras CSP, `nosniff`, `X-Frame-Options` y sin CORS abierto. `npm test` lo verifica con datos temporales.
 
 ---
 

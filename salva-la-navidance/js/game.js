@@ -47,7 +47,7 @@
     // la canción del personaje arranca desde el principio; cuenta regresiva de 4 beats
     A.play(hero, 0);
     G.countBeat = null; G.count = 0;
-    G.token = null; G.tokenP = NV.DB.startRun(prof, hero); G.tokenP.then((t) => { G.token = t; });
+    G.token = null; G.tokenP = Promise.resolve(null); // el token se pide al empezar la cuenta regresiva
     if (params.get('boss')) { G.cp = 3; G.respawnAt(G.L.checkpoints[3]); }
   };
 
@@ -104,8 +104,14 @@
     G.result = { hero: G.heroKey, time, coins: G.coinsGot, deaths: G.deaths, score: G.score, pb: false, prevBest, medal };
     G.sfx('win');
     G.submit = null;
-    NV.DB.submit({ name: G.profile.name, ig: G.profile.ig, playerId: G.profile.id, hero: G.heroKey, timeMs: Math.round(time * 1000), coins: G.coinsGot, deaths: G.deaths, token: G.token })
-      .then((r) => { G.submit = r; if (better && !r.error) savePb(); });
+    // el servidor anota la llegada YA (aunque el envío del tiempo tarde por mala señal)
+    const prof = G.profile, tokenP = G.tokenP;
+    tokenP.then((tk) => { NV.DB.finish(tk, prof.ig); return NV.DB.submit({ ig: prof.ig, secret: prof.secret || prof.id, hero: G.heroKey, timeMs: Math.round(time * 1000), coins: G.coinsGot, deaths: G.deaths, token: tk }).then((r) => {
+      G.submit = r;
+      // sin señal el tiempo queda en cola: el récord personal se guarda igual (no se pierde)
+      if (better && (!r.error || r.queued)) savePb();
+      if (r.queued) NV.DB.onSent = (t, r2) => { if (t === tk && G.result && G.result.time === time) G.submit = r2; };
+    }); });
     G.say('¡NAVIDANCE SALVADA!', { scale: 3, life: 250, sub: U.fmtTime(time), subColor: '#ffffff' });
   };
 
@@ -126,12 +132,15 @@
 
     // cuenta regresiva sincronizada con la canción
     if (!G.running && !G.finished) {
-      if (G.countBeat === null && G.beatTick) G.countBeat = G.beat;
+      if (G.countBeat === null && G.beatTick) {
+        G.countBeat = G.beat;
+        const run0 = G.tokenP = NV.DB.startRun(G.profile); run0.then((t) => { if (G.tokenP === run0) G.token = t; });
+      }
       if (G.countBeat !== null) {
         const n = 4 - (G.beat - G.countBeat);
         if (G.beatTick) { if (n > 0) { G.sfx('beep'); G.say(String(n), { scale: 6, life: 26, color: p.hero.light }); } else { G.sfx('go'); G.running = true; G.t0 = performance.now();
           // el servidor anota la largada: el tiempo final tiene que coincidir con su reloj
-          const pid = G.profile.id; G.tokenP.then((t) => NV.DB.go(t, pid)); G.say('¡YA!', { scale: 6, life: 40, color: '#f5c542', sub: 'LLEGÁ HASTA ROBO-GRINCH Y RECUPERÁ EL SONIDO', subColor: '#ffffff' }); } }
+          const ig = G.profile.ig; G.tokenP.then((t) => NV.DB.go(t, ig)); G.say('¡YA!', { scale: 6, life: 40, color: '#f5c542', sub: 'LLEGÁ HASTA ROBO-GRINCH Y RECUPERÁ EL SONIDO', subColor: '#ffffff' }); } }
       }
     }
     if (G.running) {
@@ -503,7 +512,7 @@
   // ---------------- REGISTRO (formulario) ----------------
   function setupRegister() {
     const go = document.getElementById('regGo'), err = document.getElementById('regErr');
-    let busy = false, confirmIg = null; // confirmIg: Instagram ya registrado esperando el "soy yo"
+    let busy = false;
     const msg = (t, warn) => { err.textContent = t; err.style.color = warn ? '#f5c542' : '#ff2e4a'; };
     const submit = async () => {
       if (busy) return;
@@ -514,16 +523,12 @@
       if (!/^[a-z0-9._]{1,30}$/.test(ig)) return msg('Usuario de Instagram inválido');
       if (!ok) return msg('Tenés que aceptar para competir');
       busy = true; go.textContent = 'UN SEGUNDO...'; msg('');
-      const r = await NV.DB.register(name, ig, confirmIg === ig);
+      const r = await NV.DB.register(name, ig);
       busy = false; go.textContent = 'CONTINUAR ▶';
       if (r.error) return msg(r.error);
-      if (r.exists) {
-        // un Instagram se registra una sola vez: si ya existe, se sigue con ese mismo usuario (y su mejor tiempo)
-        confirmIg = ig; go.textContent = 'SOY YO, SEGUIR ▶';
-        return msg('@' + ig + ' ya está registrado' + (r.name ? ' (' + r.name + ')' : '') + '. Si sos vos, tocá de nuevo para seguir con tu usuario.', true);
-      }
-      confirmIg = null;
-      NV.DB.saveProfile(name, ig, r.id);
+      // un Instagram se registra una sola vez y queda atado al dispositivo con el que se registró
+      if (r.exists) return msg('@' + ig + ' ya está registrado en otro dispositivo. Si es tuyo, pedile al staff de BRUTAL. que lo libere.', true);
+      NV.DB.saveProfile(name, ig, r.id, r.secret);
       if (r.bestMs && (!NV.DB.best() || r.bestMs / 1000 < NV.DB.best())) NV.DB.setBest(r.bestMs / 1000); // récord ya guardado en el ranking
       A.unlock(); A.sfx('select');
       G.go('select');
@@ -531,7 +536,6 @@
     };
     go.addEventListener('click', submit);
     const igEl = document.getElementById('regIg');
-    igEl.addEventListener('input', () => { if (confirmIg) { confirmIg = null; go.textContent = 'CONTINUAR ▶'; msg(''); } });
     igEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
     document.getElementById('regName').addEventListener('keydown', (e) => { if (e.key === 'Enter') igEl.focus(); });
     document.getElementById('regBack').addEventListener('click', () => G.go('title'));
@@ -553,7 +557,12 @@
   window.addEventListener('pointerdown', firstTouch); window.addEventListener('keydown', firstTouch);
   X.load(() => {
     const h = params.get('hero');
-    if (h && NV.HEROES[h]) { if (!NV.DB.profile()) NV.DB.saveProfile('TEST', 'test'); G.sel = NV.HERO_ORDER.indexOf(h); G.startRun(h); }
+    if (h && NV.HEROES[h]) {
+      // atajo de prueba (?hero=ivan): registra un jugador TEST si no hay perfil
+      const go = () => { G.sel = NV.HERO_ORDER.indexOf(h); G.startRun(h); };
+      if (NV.DB.profile()) go();
+      else NV.DB.init().then(() => NV.DB.register('TEST', 'test')).then((r) => { if (r.ok) NV.DB.saveProfile('TEST', 'test', r.id, r.secret); go(); });
+    }
     else G.go('gate');
   });
 })();
